@@ -1,3 +1,5 @@
+subinclude("///shell//build_defs:shell")
+
 def lint(package: str, name: str = 'lint', args: str = '') -> str:
   package = package.replace('^//', '')
   cmd = f'cd common/lint_eslint && (([ ! -d node_modules ] && npm ci) || true) && ./node_modules/.bin/eslint -c ./.eslintrc.json --ext js,ts {args} ../../{package}'

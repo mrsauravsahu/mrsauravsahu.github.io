@@ -2,9 +2,6 @@ import {urqlClient} from '../../setup/urql'
 import {variables} from '$lib/variables'
 
 export const get = async () => {
-  const dataUrl = `${variables.blogsBaseUrl}/api/blogs?sorts=-createdAt`
-  console.log(`Fetching blogs from: ${dataUrl}`)
-
   let state = {
     endCursor: undefined,
     hasNextPage: true,
@@ -14,7 +11,8 @@ export const get = async () => {
 
   do {
     // eslint-disable-next-line no-await-in-loop
-    const allBlogsResponse = await urqlClient.query(`
+    try {
+      const allBlogsResponse = await urqlClient.query(`
         query ($after: String) {
             blogs(first: 1, after: $after, order: {
                 createdAt: DESC
@@ -37,10 +35,15 @@ export const get = async () => {
         }
     `, {after: state.endCursor}).toPromise()
 
+    console.log('resp', allBlogsResponse)
+    
     blogs = [...blogs, ...(allBlogsResponse.data.blogs.nodes || [])]
     state = {
       hasNextPage: allBlogsResponse.data.blogs.pageInfo.hasNextPage,
       endCursor: allBlogsResponse.data.blogs.pageInfo.endCursor,
+    }}
+    catch(error) {
+      console.log(error)
     }
   } while (state.hasNextPage)
 
