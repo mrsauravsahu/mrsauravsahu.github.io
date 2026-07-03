@@ -1,11 +1,10 @@
-version: '3.8'
-
 networks:
   mrsauravsahu:
     name: mrsauravsahu
 
 volumes:
   portfolio_node_modules:
+  export_node_modules:
 
 services:
   # ── Blogs .NET API ─────────────────────────────────────────────
@@ -17,7 +16,6 @@ services:
       dockerfile: common/docker/dotnet-dev.dockerfile
     volumes:
       - ./apps/blogs:/app
-      # Real data lives in apps/data-store/data (portfolio/static/store is a symlink there)
       - ./apps/data-store/data:/store/data:ro
     environment:
       ASPNETCORE_URLS: "http://0.0.0.0:80"
@@ -44,13 +42,9 @@ services:
     volumes:
       - ./apps/portfolio:/app
       - portfolio_node_modules:/app/node_modules
-      # Mount data at a neutral path — entrypoint fixes the broken symlink at startup
-      - ./apps/data-store/data:/app/static/store/data:ro
       - ./apps/data-store/photos:/app/static/photos:ro
     environment:
-      # Server-side (SSR / prerender): reach blogs via Docker service name
       BLOGS_API_URL: "http://blogs"
-      # Client-side (browser): reach blogs API via host port
       VITE_BLOGS_BASE_URL: "http://localhost:30001"
     entrypoint: >
       sh -c "npm ci &&
@@ -59,3 +53,27 @@ services:
       - "3000:80"
     depends_on:
       - blogs
+
+  # ── Static export for gh-pages deployment ──────────────────────
+  # Run once with: docker compose run --rm export
+  export:
+    networks:
+      - mrsauravsahu
+    build:
+      context: .
+      dockerfile: common/docker/node-dev.dockerfile
+      args:
+        NODE_VERSION: "18.17.1"
+    volumes:
+      - ./apps/portfolio:/app
+      - export_node_modules:/app/node_modules
+      - ./apps/data-store/photos:/app/../../data-store/photos:ro
+    environment:
+      # Reach blogs API via the Docker service name during prerender
+      BLOGS_API_URL: "http://blogs"
+    entrypoint: >
+      sh -c "npm ci && npm run export"
+    depends_on:
+      - blogs
+    profiles:
+      - export

@@ -22,21 +22,23 @@ pod:
     - name: code
       hostPath:
         pathPrefix: apps/portfolio
-    - name: data
+    - name: photos
       hostPath:
-        pathPrefix: apps/store/data
+        pathPrefix: apps/data-store/photos
   volumeMounts:
     - mountPath: /app
       name: code
-    - mountPath: /app/static/store
-      name: data
+    - mountPath: /app/static/photos
+      name: photos
   env:
     - name: HOST
       value: "0.0.0.0"
     - name: PORT
       value: "80"
-    - name: VITE_BLOGS_BASE_URL
+    - name: BLOGS_API_URL
       value: "http://blogs"
+    - name: VITE_BLOGS_BASE_URL
+      value: "http://localhost:30001"
 
 imagePullSecrets: []
 nameOverride: ""
