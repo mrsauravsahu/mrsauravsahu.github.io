@@ -98,6 +98,8 @@
 		font-size: 1rem;
 		line-height: 1.9;
 		color: var(--text);
+		user-select: none;
+		-webkit-user-select: none;
 	}
 
 	:global(.post-body p) {
