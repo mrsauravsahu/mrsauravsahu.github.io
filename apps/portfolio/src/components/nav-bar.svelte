@@ -48,11 +48,14 @@
 	}
 
 	.logo {
-		font-family: 'Great Vibes', cursive;
-		font-weight: 400;
+		font-family: var(--font-mono);
+		font-weight: 700;
+		font-size: 1rem;
+		letter-spacing: 0.05em;
 		color: var(--accent);
 		text-decoration: none;
 		line-height: 1;
+		text-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
 	}
 
 	ul.links {

@@ -24,17 +24,17 @@
 <style>
 	/* ── Tokens ───────────────────────────────────────── */
 	:root {
-		--bg:          #0d0d0d;
-		--surface:     #161616;
-		--surface-alt: #1e1e1e;
-		--border:      #2a2a2a;
-		--text:        #e8e4dc;
-		--text-muted:  #6b6560;
-		--accent:      #c8a96e;
-		--accent-dim:  #7a6540;
+		--bg:          #050505;
+		--surface:     #0a0a0a;
+		--surface-alt: #111;
+		--border:      #1a2a1a;
+		--text:        #b8ffb8;
+		--text-muted:  #3d7a3d;
+		--accent:      #00ff88;
+		--accent-dim:  #006633;
 
-		--font-display: 'Playfair Display', Georgia, serif;
-		--font-ui:      'DM Mono', 'Courier New', monospace;
+		--font-display: 'Geist Mono', 'Courier New', monospace;
+		--font-ui:      'Geist Mono', 'Courier New', monospace;
 		--font-mono:    'Geist Mono', 'Courier New', monospace;
 
 		--max-w:     72rem;
@@ -60,17 +60,25 @@
 		overflow-x: hidden;
 	}
 
-	/* ── Grain overlay ────────────────────────────────── */
+	/* ── Scanlines overlay ────────────────────────────── */
 	:global(body::before) {
 		content: '';
 		position: fixed;
 		inset: 0;
 		pointer-events: none;
 		z-index: 9999;
-		opacity: 0.038;
-		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-		background-repeat: repeat;
-		background-size: 128px 128px;
+		background: repeating-linear-gradient(
+			0deg,
+			transparent,
+			transparent 2px,
+			rgba(0, 255, 136, 0.015) 2px,
+			rgba(0, 255, 136, 0.015) 4px
+		);
+	}
+
+	/* ── CRT glow on text ─────────────────────────────── */
+	:global(h1, h2) {
+		text-shadow: 0 0 20px rgba(0, 255, 136, 0.25);
 	}
 
 	/* ── Typography globals ───────────────────────────── */
@@ -113,22 +121,18 @@
 
 	:global(.section-label) {
 		font-family: var(--font-ui);
-		font-size: 0.62rem;
-		letter-spacing: 0.2em;
-		text-transform: uppercase;
-		color: var(--accent);
+		font-size: 0.72rem;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
 		margin-bottom: 2rem;
 		display: flex;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.5rem;
 	}
 
-	:global(.section-label::after) {
-		content: '';
-		flex: 1;
-		max-width: 3rem;
-		height: 1px;
-		background: var(--accent-dim);
+	:global(.section-label::before) {
+		content: '$';
+		color: var(--accent);
 	}
 
 	:global(.section-title) {
