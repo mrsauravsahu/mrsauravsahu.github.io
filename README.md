@@ -49,18 +49,14 @@ plz run //apps/portfolio:local
 
 ### access the app
 
-- **portfolio** → `http://<node-ip>:30000`
-- **blogs API** → `http://<node-ip>:30001`
-
-Get node IP:
-```bash
-kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'
-```
-
-For WSL, use port-forward instead:
+Port-forward the services to localhost:
 ```bash
 kubectl port-forward -n mrsauravsahu-dev svc/portfolio-svc 3000:80
+kubectl port-forward -n mrsauravsahu-dev svc/blogs-svc 30001:80
 ```
+
+- **portfolio** → `http://localhost:3000`
+- **blogs API** → `http://localhost:30001`
 
 ### cleanup
 ```bash
