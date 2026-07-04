@@ -17,19 +17,11 @@ apps/
 
 The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and copied into `apps/portfolio/static/photos/` as part of the build via a `prebuild` npm script.
 
-### export
-```bash
-cd apps/portfolio
-npm run export
-# builds to apps/portfolio/build/
-# writes CNAME and .nojekyll automatically
-```
-
 ### deploy to GitHub Pages
 ```bash
 cd apps/portfolio
 npm run deploy
-# runs export then pushes build/ to the gh-pages branch
+# builds, writes CNAME + .nojekyll, then pushes to the gh-pages branch
 ```
 
 ---
