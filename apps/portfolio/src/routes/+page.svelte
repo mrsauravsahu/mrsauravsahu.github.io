@@ -150,7 +150,7 @@
 
 		<div class="blog-grid">
 			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
-				<BlogPost {blog} fallbackSrc={null} />
+				<BlogPost {blog} fallbackSrc={null} showCover={false} />
 			{:else}
 				<p class="no-posts"><span class="prompt">!</span> blogs API offline. run docker-compose up to load posts.</p>
 			{/each}
