@@ -1,16 +1,16 @@
 # DESIGN.md — mrsauravsahu.github.io
 
-A redesign direction for the personal portfolio of Saurav Sahu: software engineer, photographer, creator, biker.
+A terminal/hacker aesthetic for the personal portfolio of Saurav Sahu: software engineer, photographer, creator, biker.
 
 ---
 
-## Concept: "Field Notes"
+## Concept: "Living Terminal"
 
-The site should feel like a well-worn field notebook — the kind you carry in a jacket pocket on a bike ride or trek. Dark, tactile, deliberate. Not a corporate portfolio. Not a sterile dev blog. A living record of a person who codes, shoots, builds, and rides.
+The site should feel like a terminal session that never closed — the kind of environment a developer actually lives in. Dark, precise, monospace. Not a corporate portfolio. Not a sterile dev blog. A system that reflects the person running it.
 
-The duality is the point: monospace precision of an engineer next to the grain and motion of a photographer. These aren't contradictions — they're the same person paying obsessive attention to detail in different mediums.
+The duality is the point: the discipline and grain of a terminal window next to the warmth of physical photographs scattered like prints on a desk. These aren't contradictions — they're the same person paying obsessive attention to detail in different mediums.
 
-**The one thing someone will remember:** A dark, almost-black site where photography bleeds edge-to-edge between sections, and every piece of text feels like it was typed on a good machine.
+**The one thing someone will remember:** An almost-black site with green phosphor text, a terminal you can actually type into, and photos scattered like Polaroids on a dark table.
 
 ---
 
@@ -19,184 +19,186 @@ The duality is the point: monospace precision of an engineer next to the grain a
 ### Color Palette
 
 ```
---bg:           #0d0d0d   /* near-black, warm undertone */
---surface:      #161616   /* cards, code blocks, raised elements */
---surface-alt:  #1e1e1e   /* hover states, subtle differentiation */
---border:       #2a2a2a   /* hairlines, dividers */
---text:         #e8e4dc   /* warm off-white — not pure white, feels analog */
---text-muted:   #6b6560   /* metadata, secondary labels */
---accent:       #c8a96e   /* aged brass / golden tan — a biker's compass */
---accent-dim:   #7a6540   /* accent at lower intensity */
+--bg:           #050505   /* near-black — deeper than any dark mode default */
+--surface:      #0a0a0a   /* writing section, contact */
+--surface-alt:  #111      /* subtle differentiation */
+--border:       #1a2a1a   /* hairlines — green-tinted, not grey */
+--text:         #b8ffb8   /* phosphor green — warm, not neon */
+--text-muted:   #3d7a3d   /* secondary labels, metadata */
+--accent:       #00ff88   /* bright terminal green — prompts, cursors, highlights */
+--accent-dim:   #006633   /* accent at lower intensity — borders, glows */
 ```
 
-> Why brass/gold? It reads as warmth against the dark base. It evokes adventure equipment — a worn compass, a camera dial, a handlebar stem. It's uncommon on dev sites. It works beautifully with GeistMono.
+> Why terminal green? It reads as deliberate and earned. It evokes the CRT monitors of the machines that shaped software culture. It's uncommon on personal sites. And it works beautifully against near-black.
 
 ### Typography
 
-| Role | Font | Notes |
-|------|------|-------|
-| **Display / headings** | [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | Serif with editorial weight. Dramatic at large sizes. Signals "this person has taste." |
-| **UI / navigation / labels** | [DM Mono](https://fonts.google.com/specimen/DM+Mono) | Monospace but softer than typical terminal fonts. Used for nav links, tags, metadata. |
-| **Blog post body** | [Geist Mono](https://vercel.com/font) | Required. All blog content — headings, body, code — uses GeistMono. Feels like reading a well-formatted commit message. |
-| **Code blocks** | Geist Mono | Consistent with blog body. Differentiated only by background and color. |
+Everything is **Geist Mono** — there is no second typeface. This is a feature, not a constraint. The entire site reads like a well-formatted terminal session.
 
-**Scale (blog post):**
-- Body: 1.05rem / line-height 1.9 — generous, meditative
-- H1: 2.8rem, Playfair Display (post title on index/home)
-- GeistMono body inside post: 1rem / line-height 1.85
+| Role | Font | Size |
+|------|------|------|
+| Hero name | Geist Mono 700 | clamp(2rem, 5vw, 3.2rem) |
+| Section titles | Geist Mono 600 | clamp(1.5rem, 3.5vw, 2.4rem) |
+| UI / labels | Geist Mono 400 | 0.72–0.85rem |
+| Body / descriptions | Geist Mono 400 | 0.85–0.9rem, line-height 1.8 |
+| Terminal output | Geist Mono 400 | 0.85rem |
+| Metadata / captions | Geist Mono 400 | 0.55–0.7rem |
 
-**Scale (UI):**
-- Nav: 0.75rem uppercase DM Mono with 0.15em letter-spacing
-- Section labels: 0.65rem DM Mono, uppercase, brass accent color
+Loaded via Google Fonts with `display=block` to prevent FOUT.
+
+### Atmosphere
+
+- **Scanlines:** `body::before` repeating linear gradient at 0.015 opacity — subtle CRT texture
+- **CRT glow:** `text-shadow: 0 0 20px rgba(0, 255, 136, 0.25)` on `h1`, `h2`
+- **Scroll progress bar:** 2px accent-green bar fixed at top of viewport
 
 ---
 
 ## Layout System
 
 **Max content width:** 72rem  
-**Reading column width (blog posts):** 42rem, centered  
-**Grid:** 12-column baseline. Sections break the grid intentionally — photography panels bleed full-width.
-
-### Spatial Rhythm
-- Sections separated by full-width image bleeds (not `<hr>` dividers)
-- Generous vertical padding: 6rem+ between major sections
-- No card borders — use background differentiation (`--surface`) instead
-- Asymmetric layouts preferred: a heading offset left, content offset right
+**Reading column (blog posts):** 42rem, centered  
+**Sections:** 6rem vertical padding, alternate between `--bg` and `--surface`
 
 ---
 
 ## Navigation
 
-**Style:** Fixed top bar, ultra-minimal.  
-**Height:** 3.5rem  
-**Background:** `--bg` with a subtle `backdrop-filter: blur(12px)` when scrolled  
-**Logo:** `S—` in DM Mono, brass color. The em-dash is the detail.  
-**Links:** DM Mono, uppercase, 0.7rem. Spaced out with generous padding. Active link gets a brass underline (2px, offset).  
-**Mobile:** Full-screen overlay on hamburger. Links stack vertically in large Playfair Display — feels intentional, not just functional.
+**Style:** Fixed top bar.  
+**Logo:** `SS` in Geist Mono. Monogram, nothing more.  
+**Links:** Geist Mono, 0.7rem, with a `▋` cursor accent on active. Spaced with generous padding.  
+**Mobile:** Hamburger opens an overlay. Links stack vertically.  
+**Scroll behaviour:** Nav gains a subtle backdrop treatment after scrolling.
 
 ---
 
 ## Homepage Sections
 
-### 1. Hero
+### 1. Hero — Interactive Terminal
 
-**Layout:** Full viewport height. Dark background. Text anchored bottom-left.  
-**Content:**
-```
-[large Playfair Display — 5rem+]
-software engineer.
-photographer.
-creator. biker.
+Full viewport height. A personal photo sits as a background at `opacity: 0.06`, heavily desaturated. The terminal window is centred.
 
-[DM Mono, brass, small]
-@mrsauravsahu
-```
-**Visual:** A large, slightly desaturated personal photo (you on a ride, or shooting something) fills the right 55% of the viewport. It fades into the dark background at its left edge using a gradient mask — not a hard crop. The photo is decorative, atmospheric.
+**Terminal window anatomy:**
+- macOS-style traffic light dots (red / yellow / green) + `zsh` title in the bar
+- `$ whoami` → large phosphor-green name: **Sahu**
+- `$ cat roles.txt` → roles in muted green, line-height 1.9
+- Live input line with a `▋` blinking cursor — the user can actually type commands
 
-**On mobile:** Photo becomes a full-bleed background at reduced opacity (0.25), text overlaid.
+**Available commands:** `hi`, `hello`, `help`, `whoami`, `about`, `ls`, `date`, `blog`, `contact`, `clear`, `sudo`
+
+The terminal scrolls its own history. Clicking anywhere in the terminal body focuses the hidden input.
 
 ---
 
 ### 2. Writing / Recents
 
-**Transition from hero:** A full-width strip — a landscape photo (road, mountains, city at night, anything atmospheric) at ~30vh height. No caption. Just a moment.
-
-**Layout:** The 3 most recent posts in a horizontal row on desktop, stacked on mobile.
+**Section label:** `$ cat writing.md` (via `.section-label`)  
+**Layout:** 3-column grid on desktop, single column on mobile.
 
 **Post card design:**
-- No box, no border-radius, no shadow
-- Cover image at top, full-width within card, desaturated by default — color on hover
-- Title in Playfair Display, 1.1rem
-- Date + read time in DM Mono, `--text-muted`, 0.7rem
-- Thin brass hairline (1px) appears under title on hover
-- Entire card lifts with `translateY(-4px)` on hover, no scale
+- Image shown only when `coverImageUrl` is present — no placeholder fallback on the landing page
+- Title in Geist Mono, thin brass hairline appears under title on hover (`::after` scaleX trick)
+- Date + read time in Geist Mono `--text-muted`, 0.65rem
+- Card lifts `translateY(-4px)` on hover
 
-**"Read more" link:** DM Mono, brass, with a `→` that slides right on hover. No button styling.
+**Read-more link:** `$ ls -la posts/` with a `→` that slides right on hover. Lowercase, no text-transform.
 
 ---
 
-### 3. Beyond Code *(photography + creator + biker)*
+### 3. Beyond Code
 
-This section is woven into the homepage, not siloed.
+**Section label:** `$ cat beyond-code.json`  
+**Layout:** 3-column equal grid on desktop, single column on mobile.
 
-**Layout:** Asymmetric. Two columns, unequal.  
-- Left (40%): stacked text blocks — short, punchy statements about who you are beyond the terminal. No headers. Just small DM Mono labels ("photographer", "creator", "biker") followed by one sentence each.
-- Right (60%): a mosaic of 3–4 photos arranged in a slight overlap/offset grid. Think contact sheet aesthetic. Each photo has a thin brass border (1px). Hover on each photo reveals a caption in DM Mono.
+Each block has a JSON-style label:
+```
+{ "topic": "photography" }
+{ "topic": "creating" }
+{ "topic": "biking" }
+```
 
-**Background:** `--surface` to differentiate from the blog section.
+Label in `--accent`, braces in `--text-muted`. One paragraph of body copy per topic.
+
+**Photo dump** below the text blocks: all photos from `data-store/photos/` loaded from `photos.csv`, shuffled server-side, displayed as scattered Polaroid prints.
+
+**Polaroid tile details:**
+- White mat background `#ede9e2`, padding top/sides + generous bottom (caption area)
+- 4:3 aspect ratio via `padding-top: 75%` trick
+- Per-tile CSS `--rot` variable: `rotate(calc(var(--rot) * 1deg))` — randomised -4° to +4° at build time
+- Tiles overlap (`margin: -0.6rem`, `z-index` management)
+- Hover: straightens to 0°, scales 1.12, z-index 20
+- After hover: tile stays on top (`z-index: 10` via `.on-top` class) until next hover
+- Click: opens photo modal
+
+**Photo modal:**
+- `zoomFromPhoto` custom Svelte transition — scales from the clicked tile's centre coordinates in viewport space using `transform-origin` set dynamically
+- Light mat frame `#ede9e2`, full image, caption in Geist Mono
+- Dismiss: click backdrop or `Escape`
+
+**Mobile:** tiles slightly larger (33% width), more rotation (×2), more margin spacing
 
 ---
 
 ### 4. Contact
 
-**Layout:** Full-width, centered.  
-**Style:** Minimal. Icons replaced with text links in DM Mono. No icon grid.
+**Section label:** `$ cat contact.md`  
+**Heading:** `let's connect.` — left-aligned  
+**Links:** Left-aligned flex row, Geist Mono 0.78rem. Separated by `|` pseudo-elements.  
+Each link: underline grows from centre on hover (left/right inset CSS transition).
 
-```
-[Playfair Display, large]
-Let's connect.
-
-[DM Mono, --text-muted, links in --accent]
-linkedin  ·  github  ·  instagram  ·  email  ·  unsplash
-```
-
-Each link has a subtle brass underline that grows from center on hover.
+Links: linkedin · github · instagram · email · unsplash · medium · dev.to
 
 ---
 
-### 5. Footer / About
+### 5. Footer
 
-**Not a separate section** — integrated into a slim footer.  
-DM Mono, `--text-muted`, 0.7rem. One line: the stack (`SvelteKit · .NET · Node.js`), then `Made with care — Sahu`.
-
----
-
-## Blog List Page (`/blog/[page]`)
-
-**Layout:** Single column, generous width (64rem max).  
-**Each entry:**
-```
-[DM Mono, --text-muted, 0.65rem]  2024 · 4 min
-
-[Playfair Display, 1.4rem]
-Post Title Here
-
-[--text-muted, 0.85rem]
-Short description of the post...
-```
-- Entries separated by a single `1px` line in `--border`
-- No cards, no shadows
-- Title turns brass on hover
-- A thin brass bar (3px wide, 1.2rem tall) appears on the left edge of the hovered entry
-
-**Pagination:** DM Mono. `← prev · 2 of 6 · next →`. Centered. Generous padding.
+DM Mono / Geist Mono, `--text-muted`, 0.65rem.  
+Left: tech stack `SvelteKit · .NET · Node.js`  
+Right: `Keep on coding — Sahu, S ▋` (blinking cursor)
 
 ---
 
-## Blog Post Page (`/blog/posts/[id]`)
+## Section Labels
 
-This is the most important page to get right. It should feel like reading a well-typeset article.
+All section labels use the `.section-label` class. The `$` prompt is injected via CSS:
 
-**Font:** GeistMono for everything inside the post body. Playfair Display for the post title only.
+```css
+.section-label::before {
+  content: '$';
+  color: var(--accent);
+}
+```
 
-**Layout:**
-- Post title: Playfair Display, 2.6rem, `--text`, max-width 56rem
-- Metadata: DM Mono, `--text-muted`, 0.75rem — `Published · Monday, June 20 2026 · 6 min read`
-- Thin brass `<hr>` (1px, 4rem wide, left-aligned) between title block and body
-- Body column: 42rem, centered
-- Line height: 1.9
-- Font size: 1rem GeistMono
-- Paragraph spacing: 1.6rem
+This means markup never contains the `$` — it's purely presentational. The label text is the "command" being run (e.g. `cat writing.md`, `cat contact.md`).
 
-**In-post elements:**
-- `<code>` inline: brass text on `--surface` background, no border, slight padding
-- `<pre>` blocks: `--surface` background, brass left border (3px), GeistMono, overflow scroll
-- `<blockquote>`: left border brass 3px, `--text-muted`, italic, indented
-- `<h2>`, `<h3>`: GeistMono, `--accent`, uppercase, 0.8em letter-spacing — they feel like section markers in a terminal log
-- `<table>`: minimal, hairline `--border` borders, `--surface` header row
-- Images: full column width, no border-radius, a subtle `box-shadow: 0 4px 24px rgba(0,0,0,0.5)`
+---
 
-**Reading progress:** A thin brass progress bar at the very top of the viewport (above the nav), CSS-only via `animation-timeline: scroll()`.
+## Photo Strip Dividers
+
+Between sections: a full-width `div.photo-strip` with a personal photograph.  
+- Height: `22vh`, min `120px`
+- Image: `opacity: 0.25`, `grayscale(80%) sepia(20%)` — lifts slightly on hover  
+- Top and bottom fade to `--bg` via `::before`/`::after` gradients
+
+---
+
+## Blog Cover SVG Illustrations
+
+Three SVG illustrations (`/img/blog-cover-1.svg`, `2`, `3`) serve as per-position fallbacks for blog cards that have no `coverImageUrl`. Each is 800×500 (16:10) and uses the site palette.
+
+| Cover | Theme |
+|-------|-------|
+| 1 | Terminal window with `cat writing.md`, file listing, blinking cursor |
+| 2 | Network graph — glowing centre node, grid dot background |
+| 3 | Sine wave visualiser with axis labels and `signal --freq 1hz` label |
+
+All share: scanline overlay, corner bracket accents, Courier New monospace, glow SVG filter.
+
+---
+
+## Data Flow
+
+Photos are managed in `apps/data-store/photos/` alongside `photos.csv` (filename + caption). During `npm run build`, a `prebuild` script copies them into `apps/portfolio/static/photos/`. The server-side `load` function reads the CSV, parses it, and shuffles the order on every request/prerender.
 
 ---
 
@@ -206,44 +208,14 @@ This is the most important page to get right. It should feel like reading a well
 
 | Trigger | Effect |
 |---------|--------|
-| Page load | Content fades in with `opacity: 0 → 1` + `translateY(12px → 0)`, staggered per section (CSS `animation-delay`) |
-| Nav scroll | Nav gains `backdrop-filter: blur` after 80px scroll |
-| Blog card hover | Image desaturation lifts, card `translateY(-4px)`, brass hairline appears |
-| Blog list item hover | Brass left bar slides in from left (`scaleX(0 → 1)`, transform-origin: left) |
-| Photo mosaic hover | Individual photo scales 1.02, caption fades in |
-| Link hover | Underline grows from center (`scaleX` trick) |
-| Reading progress | Brass bar at top tracks scroll position via `animation-timeline: scroll()` |
+| Page load | `.fade-up` — `opacity: 0 → 1`, `translateY(16px → 0)`, staggered with `animation-delay` |
+| Nav scroll | Background treatment after 80px |
+| Blog card hover | Image colour lifts, card `translateY(-4px)`, brass hairline extends |
+| Photo tile hover | Straightens, scales 1.12, comes to top |
+| Photo tile click | Zoom-from-source modal scale transition |
+| Terminal cursor | `▋` blinks at 1s `step-end` — feels like a real terminal |
+| Contact links | Underline grows from centre |
+| Read-more arrow | `→` slides 3px right |
+| Scroll progress | Green 2px bar grows across top of viewport |
 
-**Duration baseline:** 200ms ease-out for interactive states, 400ms ease-out for entrance animations.  
-**No bounce, no spring, no elastic** — deliberate and mechanical, like a good camera shutter.
-
----
-
-## Textures & Atmosphere
-
-- **Grain overlay:** A subtle CSS noise texture (`opacity: 0.035`) over the entire page via a `::before` pseudo-element on `body`. Adds analog warmth without visual noise.
-- **Photo gradients:** All edge-fading photos use a `mask-image: linear-gradient()` to dissolve into the dark background — no hard crops.
-- **Surface differentiation:** Sections alternate between `--bg` and `--surface` (a 2% lightness step). Enough to signal change, not enough to feel "card-y".
-
----
-
-## Implementation Notes (SvelteKit)
-
-- Import GeistMono via `@fontsource/geist-mono` (npm package — no Google Fonts dependency, loads locally)
-- Import Playfair Display via Google Fonts (`display=swap`)
-- Import DM Mono via Google Fonts
-- CSS custom properties defined in `:root` inside `+layout.svelte`
-- Grain overlay: `body::before` with an SVG `feTurbulence` filter as background-image
-- Reading progress bar: a single `<div class="progress">` in the layout, styled with `animation-timeline: scroll()` (check browser support — add JS fallback)
-- Photo mosaic in "Beyond Code": static images from `/static/img/` — you'll want to add 3–4 lifestyle photos (bike, camera, outdoors)
-- Blog desaturation: CSS `filter: grayscale(100%)` with `transition` to `grayscale(0%)` on hover
-
----
-
-## What Makes This Unforgettable
-
-1. **The brass accent** — warm, uncommon, reads as craftsmanship
-2. **GeistMono on blog posts** — code-adjacent but not intimidating. Your writing feels like it was composed in a great editor.
-3. **Photography as punctuation** — not a gallery section, not a sidebar. Full-bleed images that break the layout rhythm, like turning a page and finding a photo spread.
-4. **Field notes identity** — the entire site implies a person who is paying attention: to code, to light, to roads, to details.
-5. **No rounded corners, no gradients, no purple** — every cliché deliberately avoided.
+**Duration baseline:** 200ms ease-out for interactive states, 600ms for entrance animations. No spring, no bounce — deliberate and mechanical.
