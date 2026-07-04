@@ -57,8 +57,12 @@
 		contact: () => 'linkedin · github · instagram · email\nscroll to the bottom for links',
 	};
 
+	let composing = false;
+
 	function run(e: KeyboardEvent) {
+		if (composing) return;
 		if (e.key !== 'Enter') return;
+		e.preventDefault();
 		const cmd = input.trim();
 		input = '';
 		if (!cmd) return;
@@ -117,10 +121,16 @@
 						bind:this={inputEl}
 						bind:value={input}
 						on:keydown={run}
+						on:compositionstart={() => composing = true}
+						on:compositionend={() => composing = false}
 						class="terminal-input-hidden"
+						type="text"
 						autocomplete="off"
 						autocorrect="off"
+						autocapitalize="none"
 						spellcheck="false"
+						inputmode="text"
+						enterkeyhint="send"
 					/>
 				</div>
 			</div>
@@ -356,11 +366,19 @@
 	.cursor-line { margin-top: 0.25rem; }
 
 	.terminal-input-hidden {
-		position: absolute;
+		position: fixed;
+		top: -200px;
+		left: 0;
+		width: 100%;
+		height: 48px;
 		opacity: 0;
+		font-size: 16px; /* prevents iOS auto-zoom on focus */
+		border: none;
+		outline: none;
+		background: transparent;
+		color: transparent;
+		caret-color: transparent;
 		pointer-events: none;
-		width: 1px;
-		height: 1px;
 	}
 
 	.terminal-display {
