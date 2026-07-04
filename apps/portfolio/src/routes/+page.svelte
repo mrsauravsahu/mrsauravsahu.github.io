@@ -411,15 +411,6 @@
 		filter: grayscale(60%) sepia(10%);
 	}
 
-	.photo-strip img.rotated-strip {
-		width: 100%;
-		height: 400%;
-		margin-top: -150%;
-		transform: rotate(90deg);
-		transform-origin: center center;
-		object-fit: cover;
-	}
-
 	.photo-strip::before,
 	.photo-strip::after {
 		content: '';
