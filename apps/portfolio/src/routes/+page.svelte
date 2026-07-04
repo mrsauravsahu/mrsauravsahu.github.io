@@ -102,8 +102,7 @@
 
 <!-- ── Hero ──────────────────────────────────────────────── -->
 <section class="hero">
-	<img class="hero-bg" src="/photos/20260427_163003.jpg" alt="" aria-hidden="true" />
-	<div class="hero-content">
+<div class="hero-content">
 		<div class="terminal-window">
 			<div class="terminal-bar">
 				<span class="dot red"></span>
@@ -198,11 +197,6 @@
 	</div>
 </section>
 
-<!-- ── Divider strip ──────────────────────────────────────── -->
-<div class="photo-strip">
-	<img src="/photos/20260428_190024.jpg" alt="" aria-hidden="true" />
-</div>
-
 <!-- ── Writing / Recents ──────────────────────────────────── -->
 <section class="writing" id="writing">
 	<div class="section-inner">
@@ -272,19 +266,6 @@
 		justify-content: center;
 		padding: 0 2rem;
 		overflow: hidden;
-	}
-
-	.hero-bg {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: center;
-		opacity: 0.06;
-		filter: grayscale(100%) sepia(20%);
-		pointer-events: none;
-		transform: rotate(90deg) scale(1.8);
 	}
 
 	.hero-content {
@@ -419,49 +400,7 @@
 		50%       { opacity: 0; }
 	}
 
-	/* ── Photo strips ─────────────────────────────────── */
-	.photo-strip {
-		width: 100%;
-		height: 22vh;
-		min-height: 120px;
-		position: relative;
-		overflow: hidden;
-	}
-
-	.photo-strip img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: center;
-		opacity: 0.25;
-		filter: grayscale(80%) sepia(20%);
-		transition: opacity 0.6s ease, filter 0.6s ease;
-	}
-
-	.photo-strip:hover img {
-		opacity: 0.4;
-		filter: grayscale(60%) sepia(10%);
-	}
-
-	.photo-strip::before,
-	.photo-strip::after {
-		content: '';
-		position: absolute;
-		left: 0; right: 0;
-		height: 40%;
-		pointer-events: none;
-		z-index: 1;
-	}
-	.photo-strip::before {
-		top: 0;
-		background: linear-gradient(to bottom, var(--bg), transparent);
-	}
-	.photo-strip::after {
-		bottom: 0;
-		background: linear-gradient(to top, var(--bg), transparent);
-	}
-
-/* ── Writing ──────────────────────────────────────── */
+	/* ── Writing ──────────────────────────────────────── */
 	.writing {
 		background: var(--surface);
 	}
