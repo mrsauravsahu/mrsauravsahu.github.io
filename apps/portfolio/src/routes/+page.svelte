@@ -1,5 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
+	import Icon from 'svelte-awesome/components/Icon.svelte';
+	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
+	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
 	import BlogPost from '../components/blog-post.svelte';
 	import type { PageData } from './$types';
 	export let data: PageData;
@@ -27,7 +31,10 @@
 		selectedPhoto = photo;
 	}
 
-	function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape') selectedPhoto = null; }
+	function onKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') { selectedPhoto = null; return; }
+		if (!isTouch && e.key.length === 1 && !e.metaKey && !e.ctrlKey) inputEl?.focus();
+	}
 
 	type Entry = { cmd: string; output: string };
 	let history: Entry[] = [];
@@ -58,6 +65,12 @@
 	};
 
 	let composing = false;
+	let isTouch = false;
+
+	onMount(() => {
+		isTouch = window.matchMedia('(hover: none)').matches;
+		if (!isTouch) inputEl?.focus();
+	});
 
 	function run(e: KeyboardEvent) {
 		if (composing) return;
@@ -138,33 +151,6 @@
 	</div>
 </section>
 
-<!-- ── Writing / Recents ──────────────────────────────────── -->
-<section class="writing" id="writing">
-	<div class="section-inner">
-		<p class="section-label">cat writing.md</p>
-		<h2 class="section-title">things I've been<br />thinking about.</h2>
-		<p class="section-body">
-			A decade of shipping software, riding roads, and making photographs. These are the notes from
-			the journey — mostly technical, always honest.
-		</p>
-
-		<div class="blog-grid">
-			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
-				<BlogPost {blog} fallbackSrc={null} showCover={false} />
-			{:else}
-				<p class="no-posts"><span class="prompt">!</span> blogs API offline. run docker-compose up to load posts.</p>
-			{/each}
-		</div>
-
-		<a class="read-more" href="/blog/1"><span class="prompt">$</span> ls -la posts/ <span class="arrow">→</span></a>
-	</div>
-</section>
-
-<!-- ── Divider strip 2 ────────────────────────────────────── -->
-<div class="photo-strip">
-	<img src="/photos/20260428_190024.jpg" alt="" aria-hidden="true" />
-</div>
-
 <!-- ── Beyond Code ────────────────────────────────────────── -->
 <section class="beyond" id="beyond">
 	<div class="section-inner">
@@ -208,6 +194,34 @@
 				</button>
 			{/each}
 		</div>
+		<p class="photo-collection-note">a growing collection of memories. more to come soon.</p>
+	</div>
+</section>
+
+<!-- ── Divider strip ──────────────────────────────────────── -->
+<div class="photo-strip">
+	<img src="/photos/20260428_190024.jpg" alt="" aria-hidden="true" />
+</div>
+
+<!-- ── Writing / Recents ──────────────────────────────────── -->
+<section class="writing" id="writing">
+	<div class="section-inner">
+		<p class="section-label">cat writing.md</p>
+		<h2 class="section-title">things I've been thinking about.</h2>
+		<p class="section-body">
+			A decade of shipping software, riding roads, and making photographs. These are the notes from
+			the journey — mostly technical, always honest.
+		</p>
+
+		<div class="blog-grid">
+			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
+				<BlogPost {blog} fallbackSrc={null} showCover={false} />
+			{:else}
+				<p class="no-posts"><span class="prompt">!</span> blogs API offline. run docker-compose up to load posts.</p>
+			{/each}
+		</div>
+
+		<a class="read-more" href="/blog/1"><span class="prompt">$</span> ls -la posts/ <span class="arrow">→</span></a>
 	</div>
 </section>
 
@@ -229,14 +243,14 @@
 	<div class="section-inner">
 		<p class="section-label">cat contact.md</p>
 		<h2 class="contact-heading">let's connect.</h2>
-<div class="contact-links">
-			<a href="https://www.linkedin.com/in/mrsauravsahu" target="_blank" rel="noopener">linkedin</a>
-			<a href="https://github.com/mrsauravsahu" target="_blank" rel="noopener">github</a>
-			<a href="https://instagram.com/explorewithsahu" target="_blank" rel="noopener">instagram</a>
-			<a href="mailto:mrsauravsahu@outlook.com">email</a>
-			<a href="https://unsplash.com/@mrsauravsahu" target="_blank" rel="noopener">unsplash</a>
-			<a href="https://mrsauravsahu.medium.com" target="_blank" rel="noopener">medium</a>
-			<a href="https://dev.to/mrsauravsahu" target="_blank" rel="noopener">dev.to</a>
+		<div class="contact-links">
+			<a href="https://www.linkedin.com/in/mrsauravsahu" target="_blank" rel="noopener"><Icon data={faLinkedin} />linkedin</a>
+			<a href="https://github.com/mrsauravsahu" target="_blank" rel="noopener"><Icon data={faGithub} />github</a>
+			<a href="https://instagram.com/explorewithsahu" target="_blank" rel="noopener"><Icon data={faInstagram} />instagram</a>
+			<a href="mailto:mrsauravsahu@outlook.com"><Icon data={faEnvelope} />email</a>
+			<a href="https://unsplash.com/@mrsauravsahu" target="_blank" rel="noopener"><Icon data={faUnsplash} />unsplash</a>
+			<a href="https://mrsauravsahu.medium.com" target="_blank" rel="noopener"><Icon data={faMedium} />medium</a>
+			<a href="https://dev.to/mrsauravsahu" target="_blank" rel="noopener"><Icon data={faDev} />dev.to</a>
 		</div>
 	</div>
 </section>
@@ -597,6 +611,15 @@
 		color: #555;
 	}
 
+	.photo-collection-note {
+		text-align: center;
+		margin-top: 3rem;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		letter-spacing: 0.08em;
+		color: var(--text-muted);
+	}
+
 	/* ── Photo modal ──────────────────────────────────── */
 	.modal-backdrop {
 		position: fixed;
@@ -652,7 +675,7 @@
 
 	.contact-links {
 		display: flex;
-		justify-content: flex-start;
+		justify-content: center;
 		flex-wrap: wrap;
 		gap: 0;
 	}
@@ -666,6 +689,9 @@
 		padding: 0.25rem 1.5rem;
 		position: relative;
 		transition: color 0.2s ease;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
 	}
 
 	.contact-links a::before {
