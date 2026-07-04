@@ -12,7 +12,7 @@
 </script>
 
 <nav class:scrolled>
-	<a href="/" class="logo">Sahu, S</a>
+	<a href="/" class="logo">SS</a>
 
 	<button class="hamburger" aria-label="Menu" on:click={() => (menuOpen = !menuOpen)}>
 		<span></span><span></span>
