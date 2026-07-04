@@ -104,7 +104,7 @@ jobs:
       env:
         GITVERSION_EXEC_PATH: /home/runner/.dotnet/tools/dotnet-gitversion
         JQ_EXEC_PATH: /usr/bin/jq
-        SEMVERYEASY_CHANGED_SERVICES: ${{ fromJSON(steps.generate_other_targets.outputs.SERVICES) }}
+        SEMVERYEASY_CHANGED_SERVICES: ${{ fromJSON(steps.generate_other_targets.outputs.SERVICES || '[]') }}
         GITVERSION_CONFIG_MONOREPO: ${{ env.GITVERSION_CONFIG_MONOREPO }}
       uses: mrsauravsahu/monotools/apps/semver-yeasy@main
       with: 
