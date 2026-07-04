@@ -27,6 +27,19 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Fetch all history for all tags and branches
+      run: |
+        git fetch --unshallow
+        git checkout main && git checkout -
+
+    - name: Checkout to branch
+      uses: mrsauravsahu/monotools/apps/semver-yeasy@main
+      env:
+        GITVERSION_EXEC_PATH: /home/runner/.dotnet/tools/dotnet-gitversion
+      with:
+        repo-type: MONOREPO
+        mode: checkout
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
@@ -35,17 +48,6 @@ jobs:
     - name: Install GitVersion.Tool
       run: dotnet tool install --global GitVersion.Tool --version 5.12.0
 
-    - name: Fetch all history for all tags and branches
-      run: |
-        git fetch --unshallow
-        git checkout main && git checkout -
-
-    - name: Checkout to branch
-      uses: mrsauravsahu/monotools/apps/semver-yeasy@main
-      with:
-        repo-type: MONOREPO
-        mode: checkout
-
     - uses: actions/cache@v4
       with:
         path: plz-out
@@ -53,8 +55,10 @@ jobs:
 
     - name: Calculate changed services
       id: calculate_changed_services
+      env:
+        GITVERSION_EXEC_PATH: /home/runner/.dotnet/tools/dotnet-gitversion
       uses: mrsauravsahu/monotools/apps/semver-yeasy@main
-      with: 
+      with:
         repo-type: MONOREPO
         mode: changed
 
@@ -65,19 +69,19 @@ jobs:
       run: |
         echo "SERVICES_RAW='${SERVICES_RAW}'"
         SERVICES=($(echo "${SERVICES_RAW}" | jq -r '.value[]'))
-        echo "SERVICES='${SERVICES[@]}'"
 
-        DOCKER_BUILD_TARGETS=($(echo "${SERVICES[@]}" | xargs printf "//%s:docker "))
-        IMAGE_SCAN_TARGETS=($(echo "${SERVICES[@]}" | xargs printf "//%s:image_scan "))
+        if [ "${#SERVICES[@]}" == "0" ]; then
+          echo "SERVICES=''" >> $GITHUB_OUTPUT
+          echo "DOCKER_BUILD_TARGETS=''" >> $GITHUB_OUTPUT
+          echo "IMAGE_SCAN_TARGETS=''" >> $GITHUB_OUTPUT
+        else
+          DOCKER_BUILD_TARGETS=($(echo "${SERVICES[@]}" | xargs printf "//%s:docker "))
+          IMAGE_SCAN_TARGETS=($(echo "${SERVICES[@]}" | xargs printf "//%s:image_scan "))
 
-        echo "DOCKER_BUILD_TARGETS='${DOCKER_BUILD_TARGETS[@]}'"
-        echo "IMAGE_SCAN_TARGETS='${IMAGE_SCAN_TARGETS[@]}'"
-
-        echo "DOCKER_BUILD_TARGETS=\"${DOCKER_BUILD_TARGETS[@]}\"" >> $GITHUB_OUTPUT
-        echo "IMAGE_SCAN_TARGETS=\"${IMAGE_SCAN_TARGETS[@]}\"" >> $GITHUB_OUTPUT
-
-        changed_services=$(printf '%s' "$SERVICES" | jq --raw-input --slurp '.')
-        echo "SERVICES='${SERVICES[@]}'" >> $GITHUB_OUTPUT
+          echo "SERVICES='${SERVICES[@]}'" >> $GITHUB_OUTPUT
+          echo "DOCKER_BUILD_TARGETS='${DOCKER_BUILD_TARGETS[@]}'" >> $GITHUB_OUTPUT
+          echo "IMAGE_SCAN_TARGETS='${IMAGE_SCAN_TARGETS[@]}'" >> $GITHUB_OUTPUT
+        fi
 
     # - name: lint targets
     #   if: steps.generate_other_targets.outputs.SERVICES != ''
@@ -107,31 +111,33 @@ jobs:
         SEMVERYEASY_CHANGED_SERVICES: ${{ fromJSON(steps.generate_other_targets.outputs.SERVICES || '[]') }}
         GITVERSION_CONFIG_MONOREPO: ${{ env.GITVERSION_CONFIG_MONOREPO }}
       uses: mrsauravsahu/monotools/apps/semver-yeasy@main
-      with: 
+      with:
         repo-type: MONOREPO
         mode: calculate-version
         diff_source: ${{ steps.calculate_changed_services.outputs.diff_source }}
         diff_dest: ${{ steps.calculate_changed_services.outputs.diff_dest }}
 
     - name: Update PR description
+      if: ${{ github.event_name == 'pull_request' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SEMVERY_YEASY_PR_BODY: ${{ steps.calculate_service_versions.outputs.PR_BODY }}
-        if: ${{ github.event_name == 'pull_request' }}
+        GITVERSION_EXEC_PATH: /home/runner/.dotnet/tools/dotnet-gitversion
       uses: mrsauravsahu/monotools/apps/semver-yeasy@main
-      with: 
+      with:
         repo-type: MONOREPO
         mode: update-pr
         diff_source: ${{ steps.calculate_changed_services.outputs.diff_source }}
         diff_dest: ${{ steps.calculate_changed_services.outputs.diff_dest }}
 
     - name: Tag build
-      if: ${{ github.event_name == 'push' && (startsWith(steps.calculate_changed_services.outputs.diff_dest, 'release') || startsWith(steps.calculate_changed_services.outputs.diff_dest, 'hotfix')) && steps.calculate_changed_services.outputs.changed_services != '' }}
+      if: ${{ github.event_name == 'push' && steps.calculate_changed_services.outputs.changed_services != '{"value":[]}' && (startsWith(steps.calculate_changed_services.outputs.diff_dest, 'release') || startsWith(steps.calculate_changed_services.outputs.diff_dest, 'hotfix')) }}
       env:
         SEMVERYEASY_CHANGED: ${{ steps.calculate_changed_services.outputs.changed }}
-        SEMVERYEASY_CHANGED_SERVICES: ${{ steps.generate_other_targets.outputs.SERVICES }}
+        SEMVERYEASY_CHANGED_SERVICES: ${{ fromJSON(steps.generate_other_targets.outputs.SERVICES || '[]') }}
+        GITVERSION_EXEC_PATH: /home/runner/.dotnet/tools/dotnet-gitversion
       uses: mrsauravsahu/monotools/apps/semver-yeasy@main
-      with: 
+      with:
         repo-type: MONOREPO
         mode: tag
         diff_dest: ${{ steps.calculate_changed_services.outputs.diff_dest }}
