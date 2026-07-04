@@ -1,6 +1,7 @@
 <script>
 	import { DateTime, Duration } from 'luxon';
 	export let blog;
+	export let fallbackSrc = '/img/mrss-silhouette.svg';
 
 	$: duration = Duration.fromISO(blog.approxTimeToRead);
 	$: readTime = duration.minutes <= 1 ? 'less than a minute' : `${duration.toFormat('m')} min read`;
@@ -8,9 +9,11 @@
 </script>
 
 <a class="card" href={`/blog/posts/${blog.id}`}>
-	<div class="card-img-wrap">
-		<img src={blog.coverImageUrl || '/img/mrss-silhouette.svg'} alt={blog.title} loading="lazy" />
-	</div>
+	{#if blog.coverImageUrl || fallbackSrc}
+		<div class="card-img-wrap">
+			<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
+		</div>
+	{/if}
 	<p class="meta">{date} · {readTime}</p>
 	<h3 class="title">{blog.title}</h3>
 	<p class="desc">{blog.description}</p>
