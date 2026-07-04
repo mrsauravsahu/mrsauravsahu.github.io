@@ -15,7 +15,7 @@ apps/
 
 ## portfolio — static export & deploy
 
-The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and copied into `apps/portfolio/static/photos/` as part of the build via a `prebuild` npm script.
+The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and symlinked into `apps/portfolio/static/photos/`.
 
 ### deploy to GitHub Pages
 ```bash
@@ -51,8 +51,8 @@ plz run //apps/portfolio:local
 
 Port-forward the services to localhost:
 ```bash
-kubectl port-forward -n mrsauravsahu-dev svc/portfolio-svc 3000:80
-kubectl port-forward -n mrsauravsahu-dev svc/blogs-svc 30001:80
+kubectl port-forward -n mrsauravsahu-dev svc/portfolio 3000:80
+kubectl port-forward -n mrsauravsahu-dev svc/blogs 30001:80
 ```
 
 - **portfolio** → `http://localhost:3000`
