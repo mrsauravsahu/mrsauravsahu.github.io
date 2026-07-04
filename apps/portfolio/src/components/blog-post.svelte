@@ -1,86 +1,92 @@
 <script>
+	import { DateTime, Duration } from 'luxon';
 	export let blog;
+	export let fallbackSrc = '/img/mrss-silhouette.svg';
+
+	$: duration = Duration.fromISO(blog.approxTimeToRead);
+	$: readTime = duration.minutes <= 1 ? 'less than a minute' : `${duration.toFormat('m')} min read`;
+	$: date = DateTime.fromISO(blog.createdAt).toFormat('MMM yyyy');
 </script>
 
-<!-- note: rotate randomly between -4deg and 4deg -->
-<a href={`/blog/posts/${blog.id}`}>
-	<div class="blog-post" style={`--rotation: ${Math.ceil(Math.random() * 8 - 4)}deg;`}>
-		<img src={blog.coverImageUrl} alt={blog.title} />
-		<div class="title">{blog.title}</div>
-		<div class="description">{blog.description}</div>
-	</div>
+<a class="card" href={`/blog/posts/${blog.id}`}>
+	{#if blog.coverImageUrl || fallbackSrc}
+		<div class="card-img-wrap">
+			<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
+		</div>
+	{/if}
+	<p class="meta">{date} · {readTime}</p>
+	<h3 class="title">{blog.title}</h3>
+	<p class="desc">{blog.description}</p>
 </a>
 
 <style>
-	a {
+	.card {
 		text-decoration: none;
-		width: 30%;
+		display: block;
+		transform: translateY(0);
+		transition: transform 0.2s ease-out;
 	}
 
-	.blog-post {
-		background-color: #bbb;
-		/* border-radius: 1.5rem; */
-		display: flex;
-		flex-direction: column;
-		padding: 1rem;
-		transition: 0.2s ease-in-out transform;
-		/* transform: rotate(var(--rotation)); */
-		cursor: pointer;
-	}
+	.card:hover { transform: translateY(-4px); }
 
-	.blog-post:hover {
-		transform: scale(1.1) rotate(-4deg);
-	}
-
-	img {
-		margin-bottom: 0.25rem;
-		/* border-radius: 1rem; */
-		filter: grayscale();
-	}
-
-	.title,
-	.description {
-		display: -webkit-box;
-		line-clamp: 2;
-		-webkit-line-clamp: 2;
+	.card-img-wrap {
+		width: 100%;
+		aspect-ratio: 16 / 10;
 		overflow: hidden;
-		text-overflow: ellipsis;
-		-webkit-box-orient: vertical;
+		margin-bottom: 1rem;
+	}
+
+	.card-img-wrap img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		filter: grayscale(100%);
+		transition: filter 0.4s ease;
+	}
+
+	.card:hover .card-img-wrap img { filter: grayscale(0%); }
+
+	.meta {
+		font-family: var(--font-ui);
+		font-size: 0.65rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 0.5rem;
 	}
 
 	.title {
-		font-weight: 500;
-		margin: 0.5rem 0;
+		font-family: var(--font-display);
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: var(--text);
+		line-height: 1.35;
+		margin-bottom: 0.5rem;
+		position: relative;
+		padding-bottom: 0.5rem;
 	}
 
-	.description {
-		font-size: 1rem;
-		font-weight: 200;
+	.title::after {
+		content: '';
+		position: absolute;
+		bottom: 0; left: 0;
+		width: 0;
+		height: 1px;
+		background: var(--accent);
+		transition: width 0.3s ease;
 	}
 
-	@media (max-width: 40rem) {
-		.blog-post {
-			width: 70vw;
-		}
+	.card:hover .title::after { width: 100%; }
 
-		a {
-			margin: 1rem 0;
-		}
-	}
-
-	@media (max-width: 48rem) {
-		.title {
-			font-size: 0.75rem;
-		}
-		.description {
-			font-size: 0.75rem;
-		}
-		.blog-post {
-			padding: 0.75rem;
-			width: calc(100% - 2 * .75rem);
-		}
-		a {
-			width: 100%;
-		}
+	.desc {
+		font-family: var(--font-ui);
+		font-size: 0.8rem;
+		line-height: 1.7;
+		color: var(--text-muted);
+		display: -webkit-box;
+		line-clamp: 3;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 </style>

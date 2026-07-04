@@ -1,157 +1,151 @@
 <script lang="ts">
 	import { DateTime, Duration } from 'luxon';
 	import type { PageData } from './$types';
-	import Icon from 'svelte-awesome/components/Icon.svelte';
-	import { faBackward } from '@fortawesome/free-solid-svg-icons';
-	import { faForward } from '@fortawesome/free-solid-svg-icons';
 	export let data: PageData;
 	$: ({ blogs, currentPage, lastPage } = data);
 </script>
 
 <svelte:head>
-	<title>Blog</title>
+	<title>Blog — @mrsauravsahu</title>
 </svelte:head>
 
-<section class="container blogs">
-	<h1>blogs</h1>
-	<p>
-		Here are few of the things that I learned in my 10-ish years of programming/learning journey.
-		Hope it's helpful to you as well. These blogs are usually dictated by what I'm upto...
-	</p>
-	<ul class="posts-container">
-		{#each blogs as blog}
-			<!-- we're using the non-standard `rel=prefetch` attribute to
-				tell Sapper to load the data for the page as soon as
-				the user hovers over the link or taps it, instead of
-				waiting for the 'click' event -->
-			<li>
-				<a href={`posts/${blog.id}`}>
-					<div class="post">
-						<div class="title">
-							<h2>{blog.title}</h2>
+<section class="blog-list">
+	<div class="section-inner">
+		<p class="section-label">writing</p>
+		<h1 class="section-title">All posts.</h1>
+		<p class="section-body">
+			A decade of shipping software, riding roads, and making photographs.<br />
+			These are the notes from the journey.
+		</p>
+
+		<ul class="posts">
+			{#each blogs as blog (blog.id)}
+				<li class="post-item">
+					<a href={`/blog/posts/${blog.id}`} class="post-link">
+						<div class="bar"></div>
+						<div class="post-content">
+							<p class="post-meta">
+								{DateTime.fromISO(blog.createdAt).toFormat('MMM dd, yyyy')}
+								·
+								{#if Duration.fromISO(blog.approxTimeToRead).minutes <= 1}
+									less than a minute
+								{:else}
+									{Duration.fromISO(blog.approxTimeToRead).minutes} min read
+								{/if}
+							</p>
+							<h2 class="post-title">{blog.title}</h2>
+							{#if blog.description}
+								<p class="post-desc">{blog.description}</p>
+							{/if}
 						</div>
-						<hr />
-						<div class="content">
-							<div class="blog-meta">
-								<h4>{DateTime.fromISO(blog.createdAt).toRelative()}</h4>
-								•
-								<h4>
-									{#if Duration.fromISO(blog.approxTimeToRead).minutes <= 1}
-										less than a minute
-									{:else}
-										{`${Duration.fromISO(blog.approxTimeToRead).minutes} minutes`}
-									{/if}
-								</h4>
-								<h4>read</h4>
-							</div>
-							{#if blog.description}{blog.description}{/if}
-						</div>
-					</div>
-				</a>
-			</li>
-		{/each}
-	</ul>
-	<div class="page-container">
-		{#if currentPage !== 1}
-			<a href={`${currentPage - 1}`}>
-				<Icon data={faBackward} scale={1} style="color: black" />
-			</a>
-		{/if}
-		&nbsp; {currentPage} of {lastPage} &nbsp;
-		{#if currentPage !== lastPage}
-			<a href={`${currentPage + 1}`}>
-				<Icon data={faForward} scale={1} style="color: black" />
-			</a>
-		{/if}
+					</a>
+				</li>
+			{/each}
+		</ul>
+
+		<div class="pagination">
+			{#if currentPage !== 1}
+				<a href={`${currentPage - 1}`} class="page-link">← prev</a>
+			{/if}
+			<span class="page-count">{currentPage} / {lastPage}</span>
+			{#if currentPage !== lastPage}
+				<a href={`${currentPage + 1}`} class="page-link">next →</a>
+			{/if}
+		</div>
 	</div>
 </section>
 
 <style>
-	.posts-container {
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		flex-wrap: wrap;
-		margin-top: 2rem;
+	.blog-list {
+		padding-top: 8rem;
+		background: var(--bg);
+		min-height: 100vh;
 	}
 
-	.page-container {
+	.posts {
+		list-style: none;
+		margin-top: 4rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.post-item {
+		border-bottom: 1px solid var(--border);
+	}
+
+	.post-link {
+		display: flex;
+		align-items: stretch;
+		gap: 1.5rem;
+		text-decoration: none;
+		padding: 2rem 0;
+		position: relative;
+	}
+
+	.bar {
+		width: 3px;
+		background: var(--accent);
+		transform: scaleY(0);
+		transform-origin: top;
+		transition: transform 0.25s ease;
+		flex-shrink: 0;
+	}
+
+	.post-link:hover .bar { transform: scaleY(1); }
+
+	.post-content { flex: 1; }
+
+	.post-meta {
+		font-family: var(--font-ui);
+		font-size: 0.65rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 0.5rem;
+	}
+
+	.post-title {
+		font-family: var(--font-display);
+		font-size: 1.3rem;
+		font-weight: 700;
+		color: var(--text);
+		line-height: 1.3;
+		margin-bottom: 0.5rem;
+		transition: color 0.2s ease;
+	}
+
+	.post-link:hover .post-title { color: var(--accent); }
+
+	.post-desc {
+		font-family: var(--font-ui);
+		font-size: 0.82rem;
+		line-height: 1.7;
+		color: var(--text-muted);
+	}
+
+	.pagination {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding-bottom: 4rem;
+		gap: 2rem;
+		padding: 4rem 0 2rem;
 	}
 
-	.content {
-		padding: 1rem;
-		padding-top: 0;
-	}
-
-	.page-container > a {
-		display: flex;
-	}
-
-	.post {
-		/* box-shadow: rgb(191, 191, 191) 0.25rem 0.25rem 0.25rem; */
-		height: 16rem;
-		/* padding: 1rem; */
-		background-color: #bbb;
-		border-radius: 0.25rem;
-	}
-
-	ul {
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-	}
-	li {
-		list-style-type: none;
+	.page-link {
+		font-family: var(--font-ui);
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--accent);
 		text-decoration: none;
-		margin-bottom: 2rem;
-		width: 100%;
-		min-height: 12rem;
+		transition: opacity 0.2s;
 	}
 
-	.title > h2 {
-		padding: 2rem 1rem 1rem 1rem;
-		margin: 0;
-	}
+	.page-link:hover { opacity: 0.7; }
 
-	:global(.blogs .title h1) {
-		margin-top: 0;
-	}
-
-	.blog-meta > h4 {
-		display: inline;
-	}
-
-	.blog-meta {
-		margin: 1rem 0;
-	}
-
-	hr {
-		background-color: rgb(45, 45, 45);
-		width: 75%;
-		height: 0.0125rem;
-		border: none;
-		stroke-width: 0;
-	}
-
-	a {
-		text-decoration: none;
-	}
-
-	@media (min-width: 48rem) {
-		li {
-			width: calc(50% - 1rem);
-		}
-	}
-
-	@media (max-width: 40rem) {
-		.post {
-			height: auto;
-		}
+	.page-count {
+		font-family: var(--font-ui);
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		color: var(--text-muted);
 	}
 </style>

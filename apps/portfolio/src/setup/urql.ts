@@ -1,3 +1,9 @@
-import {createClient} from '@urql/core'
+import { Client, fetchExchange } from '@urql/core'
+import { env } from '$env/dynamic/private'
 
-export const urqlClient = createClient({url: 'http://localhost:30001/graphql' })
+const blogsApiUrl = env.BLOGS_API_URL ?? 'http://localhost:30001'
+
+export const urqlClient = new Client({
+  url: `${blogsApiUrl}/graphql`,
+  exchanges: [fetchExchange],
+})

@@ -1,137 +1,136 @@
 <script>
-	import Icon from 'svelte-awesome/components/Icon.svelte';
-	import { faEllipsisV, faHome } from '@fortawesome/free-solid-svg-icons';
+	import { onMount } from 'svelte';
 
-	let isNavOpen = false;
+	let scrolled = false;
+	let menuOpen = false;
+
+	onMount(() => {
+		const onScroll = () => { scrolled = window.scrollY > 60; };
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	});
 </script>
 
-<nav class:nav__open={isNavOpen}>
-	<div class="navmain">
-		<a href="/#home" class="brand" on:click={() => (isNavOpen = false)}>
-			<!-- <Icon data={faHome} scale={2} style="color: white" /> -->
-			<span class="home">S</span>
-			<!-- <span class='home secondary'>S</span> -->
-		</a>
-		<button
-			on:click={() => {
-				isNavOpen = !isNavOpen;
-			}}
-		>
-			<Icon data={faEllipsisV} scale={1} style="color: white" />
-		</button>
-	</div>
-	<ul class="navlinks" class:navlinks__closed={!isNavOpen}>
-		<li class="navlink"><a on:click={() => (isNavOpen = false)} href="/#recents">recents</a></li>
-		<li class="navlink"><a on:click={() => (isNavOpen = false)} href="/blog">blogs</a></li>
-		<li class="navlink"><a on:click={() => (isNavOpen = false)} href="/#contact">contact</a></li>
-		<li class="navlink"><a on:click={() => (isNavOpen = false)} href="/#about">about</a></li>
+<nav class:scrolled>
+	<a href="/" class="logo">SS</a>
+
+	<button class="hamburger" aria-label="Menu" on:click={() => (menuOpen = !menuOpen)}>
+		<span></span><span></span>
+	</button>
+
+	<ul class="links" class:open={menuOpen}>
+		<li><a href="/#writing" on:click={() => (menuOpen = false)}>writing</a></li>
+		<li><a href="/#beyond" on:click={() => (menuOpen = false)}>beyond</a></li>
+		<li><a href="/blog/1" on:click={() => (menuOpen = false)}>all posts</a></li>
+		<li><a href="/#contact" on:click={() => (menuOpen = false)}>contact</a></li>
 	</ul>
 </nav>
 
 <style>
-	.brand span {
-		padding: 0 1rem;
-		font-size: 2rem;
-		font-weight: bold;
-		font-family: var(--font-title);
-	}
-
-	span.home::after {
-		content: 'S';
-		position: relative;
-		left: -4%;
-	}
-
 	nav {
 		position: fixed;
-		width: 100%;
+		top: 0; left: 0; right: 0;
+		height: 3.5rem;
 		display: flex;
 		align-items: center;
-		background-color: var(--accent);
-		padding: 0;
-		/* border-radius: 1rem; */
-		height: 4rem;
-		transition: 0.2s ease-in-out height;
+		justify-content: space-between;
+		padding: 0 2rem;
 		z-index: 100;
+		transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease;
+		border-bottom: 1px solid transparent;
 	}
 
-	.brand {
-		padding: 0 1rem;
+	nav.scrolled {
+		background: rgba(13, 13, 13, 0.88);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border-color: var(--border);
 	}
 
-	button {
-		display: none;
-		border: none;
-		background: none;
-		padding: 0 2rem;
-	}
-
-	.navlinks {
-		list-style-type: none;
-		display: flex;
-		height: 100%;
-		margin: 0;
-	}
-
-	.navlink {
-		display: flex;
-		align-items: center;
-	}
-
-	a,
-	a:visited {
-		font-family: var(--font-title);
-		font-size: 1.25rem;
-		color: var(--bg);
+	.logo {
+		font-family: var(--font-mono);
+		font-weight: 700;
+		font-size: 1rem;
+		letter-spacing: 0.05em;
+		color: var(--accent);
 		text-decoration: none;
-		padding: 0 2rem;
+		line-height: 1;
+		text-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+	}
+
+	ul.links {
+		display: flex;
+		gap: 2.5rem;
+		list-style: none;
+	}
+
+	ul.links a {
+		font-family: var(--font-ui);
+		font-size: 0.7rem;
+		letter-spacing: 0.15em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		text-decoration: none;
+		position: relative;
+		transition: color 0.2s ease;
+	}
+
+	ul.links a::after {
+		content: '';
+		position: absolute;
+		bottom: -3px;
+		left: 50%; right: 50%;
+		height: 1px;
+		background: var(--accent);
+		transition: left 0.2s ease, right 0.2s ease;
+	}
+
+	ul.links a:hover { color: var(--text); }
+	ul.links a:hover::after { left: 0; right: 0; }
+
+	.hamburger {
+		display: none;
+		flex-direction: column;
+		gap: 5px;
+		background: none;
+		border: none;
 		cursor: pointer;
-		transform: translateY(0);
-		transition: transform 0.3s ease-in-out;
+		padding: 0.5rem;
 	}
 
-	a:hover {
-		transform: translateY(-0.15rem);
+	.hamburger span {
+		display: block;
+		width: 22px;
+		height: 1px;
+		background: var(--text-muted);
+		transition: background 0.2s;
 	}
 
-	@media (max-width: 40rem) {
-		nav {
-			flex-direction: column;
-		}
-		/* show the ellipsis button */
-		button {
-			display: initial;
-		}
+	.hamburger:hover span { background: var(--accent); }
 
-		.navlinks {
-			flex-direction: column;
-		}
+	@media (max-width: 600px) {
+		.hamburger { display: flex; }
 
-		.navmain {
-			align-self: stretch;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			height: 4rem;
-		}
-
-		.navlinks__closed {
+		ul.links {
 			display: none;
+			position: absolute;
+			top: 3.5rem; left: 0; right: 0;
+			flex-direction: column;
+			gap: 0;
+			background: rgba(13, 13, 13, 0.97);
+			backdrop-filter: blur(12px);
+			border-bottom: 1px solid var(--border);
+			padding: 1rem 0 2rem;
 		}
 
-		ul {
-			padding: 0;
-			align-items: center;
-			justify-content: center;
+		ul.links.open { display: flex; }
+
+		ul.links a {
+			display: block;
+			padding: 1rem 2rem;
+			font-size: 0.8rem;
 		}
 
-		li {
-			padding: 2rem;
-			text-transform: uppercase;
-		}
-
-		.nav__open {
-			height: calc(100% - 1rem);
-		}
+		ul.links a::after { display: none; }
 	}
 </style>

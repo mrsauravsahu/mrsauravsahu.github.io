@@ -1,135 +1,223 @@
 <script>
 	import { onMount } from 'svelte';
-
 	import Nav from '../components/nav-bar.svelte';
 
+	let progress = 0;
+
 	onMount(() => {
-		import('@vanillawc/wc-markdown/themes/prism-okaidia.css');
-		import('@vanillawc/wc-markdown/index');
+		const onScroll = () => {
+			const doc = document.documentElement;
+			const h = doc.scrollHeight - window.innerHeight;
+			progress = h > 0 ? (window.scrollY / h) * 100 : 0;
+		};
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
 	});
 </script>
 
-
+<div class="progress-bar" style="width: {progress}%"></div>
 <Nav />
 <main>
 	<slot />
 </main>
 
 <style>
-	@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@200;500;800&display=swap');
-	@import url('https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap');
-	@import url('https://fonts.googleapis.com/css2?family=Concert+One&family=Courier+Prime&display=swap');
-	@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&family=Concert+One&display=swap');
+	/* ── Tokens ───────────────────────────────────────── */
+	:root {
+		--bg:          #050505;
+		--surface:     #0a0a0a;
+		--surface-alt: #111;
+		--border:      #1a2a1a;
+		--text:        #b8ffb8;
+		--text-muted:  #3d7a3d;
+		--accent:      #00ff88;
+		--accent-dim:  #006633;
+
+		--font-display: 'Geist Mono', 'Courier New', monospace;
+		--font-ui:      'Geist Mono', 'Courier New', monospace;
+		--font-mono:    'Geist Mono', 'Courier New', monospace;
+
+		--max-w:     72rem;
+		--reading-w: 42rem;
+	}
+
+	/* ── Reset ────────────────────────────────────────── */
+	:global(*, *::before, *::after) {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+	}
 
 	:global(html) {
-		margin: 0;
-		font-size: .8em;
-		background-color: var(--bg);
+		background: var(--bg);
+		color: var(--text);
+		font-family: var(--font-ui);
+		font-size: 16px;
+		overflow-x: hidden;
 	}
 
 	:global(body) {
-		margin: 0rem;
-		height: 100%;
+		overflow-x: hidden;
 	}
 
-	:global(h1,h2,h3,h4,h5,h6) {
-		font-family: 'Concert One', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+	/* ── Scanlines overlay ────────────────────────────── */
+	:global(body::before) {
+		content: '';
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: 9999;
+		background: repeating-linear-gradient(
+			0deg,
+			transparent,
+			transparent 2px,
+			rgba(0, 255, 136, 0.015) 2px,
+			rgba(0, 255, 136, 0.015) 4px
+		);
 	}
 
-	:global(*) {
-		font-family: 'Comfortaa', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-			Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-	}
-	:global(img){
-		width: 100%;
+	/* ── CRT glow on text ─────────────────────────────── */
+	:global(h1, h2) {
+		text-shadow: 0 0 20px rgba(0, 255, 136, 0.25);
 	}
 
-	:global(img.half){
-		width: 50%;
+	/* ── Typography globals ───────────────────────────── */
+	:global(h1, h2, h3, h4, h5, h6) {
+		font-family: var(--font-display);
+		font-weight: 700;
+		color: var(--text);
+		line-height: 1.15;
 	}
 
-	:global(pre,code) {
-		border-radius: .2rem;
-		background-color: #333;
-		font-family:  'Courier Prime', monospace;
-		color: #aaa;
+	:global(a) { color: inherit; }
+	:global(img) { display: block; max-width: 100%; }
+
+	/* ── Progress bar ─────────────────────────────────── */
+	.progress-bar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 2px;
+		background: var(--accent);
+		z-index: 10000;
+		transition: width 0.1s linear;
+		pointer-events: none;
 	}
 
-	:global(pre) {
-	padding: 1rem;
-	}
-
-	:global(code) {
-		padding: .125rem .25rem;
-	}
-
-	:root {
-		--accent: #333;
-		--bg: #aaa;
-
-		--font-title: 'Concert One', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-	}
-
+	/* ── Main ─────────────────────────────────────────── */
 	main {
-		background-color: var(--bg);
-		scroll-behavior: smooth;
-		height: 100vh;
-		overflow-y: scroll;
+		background: var(--bg);
 	}
 
-	:global(a),
-	:global(a:visited) {
-		color: black;
-	}
-
-	:global(a[role='button']) {
-		text-decoration: none;
-		margin: 2rem 0;
-		padding: 2rem;
-		background-color: black;
-		color: #aaa;
-		/* border-radius: 0.5rem; */
-		cursor: pointer;
-		transition: 0.2s ease-in-out transform;
-	}
-
-	:global(a[role='button']:hover) {
-		transform: scale(1.1);
-	}
-
+	/* ── Section base ─────────────────────────────────── */
 	:global(section) {
-		padding: 2rem;
-		padding-bottom: 0;
-		box-sizing: border-box;
-		height: 100vh;
-		padding-top: 5rem !important;
+		padding: 6rem 2rem;
 	}
 
-	:global(h1) {
-		font-size: 4rem;
-		margin: 0.25rem 0;
+	:global(.section-inner) {
+		max-width: var(--max-w);
+		margin: 0 auto;
 	}
 
-	:global(hr) {
-		margin: 0;
-		padding: 0.0625rem;
-		background-color: black;
-		stroke-width: 0;
-		border: none;
+	:global(.section-label) {
+		font-family: var(--font-ui);
+		font-size: 0.72rem;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+		margin-bottom: 2rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
-	@media (max-width: 40rem) {
-		:global(section) {
-			height: auto;
-		}
-		:global(section.page-section) {
-			height: 100vh;
-		}
+	:global(.section-label::before) {
+		content: '$';
+		color: var(--accent);
 	}
 
-	@media (min-width: 90rem) {
-		main {
-			padding: 0 calc((100vw - 90rem)/2);
-		}
+	:global(.section-title) {
+		font-family: var(--font-display);
+		font-size: clamp(2rem, 4vw, 3rem);
+		font-weight: 700;
+		color: var(--text);
+		line-height: 1.15;
+		margin-bottom: 1.25rem;
+	}
+
+	:global(.section-body) {
+		font-family: var(--font-ui);
+		font-size: 0.9rem;
+		line-height: 1.8;
+		color: var(--text-muted);
+		max-width: 48rem;
+	}
+
+	/* ── Photo strip ──────────────────────────────────── */
+	:global(.photo-strip) {
+		width: 100%;
+		height: 35vh;
+		min-height: 220px;
+		overflow: hidden;
+		position: relative;
+	}
+
+	:global(.photo-strip img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center 40%;
+		filter: grayscale(20%);
+		transition: filter 0.6s ease;
+	}
+
+	:global(.photo-strip:hover img) { filter: grayscale(0%); }
+
+	:global(.photo-strip::after) {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			to bottom,
+			var(--bg) 0%,
+			transparent 18%,
+			transparent 82%,
+			var(--bg) 100%
+		);
+		pointer-events: none;
+	}
+
+	/* ── Read-more link ───────────────────────────────── */
+	:global(.read-more) {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 3rem;
+		font-family: var(--font-ui);
+		font-size: 0.75rem;
+		letter-spacing: 0.15em;
+		text-transform: none;
+		color: var(--accent);
+		text-decoration: none;
+		transition: gap 0.2s ease;
+	}
+
+	:global(.read-more:hover) { gap: 0.9rem; }
+
+	:global(.read-more .arrow) {
+		display: inline-block;
+		transition: transform 0.2s ease;
+	}
+
+	:global(.read-more:hover .arrow) { transform: translateX(3px); }
+
+	/* ── Entrance animation ───────────────────────────── */
+	:global(.fade-up) {
+		opacity: 0;
+		transform: translateY(16px);
+		animation: fadeUp 0.6s ease-out forwards;
+	}
+
+	@keyframes fadeUp {
+		to { opacity: 1; transform: translateY(0); }
 	}
 </style>

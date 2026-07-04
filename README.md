@@ -1,73 +1,69 @@
-# template-monorepo
+# mrsauravsahu.github.io
 
-This is how I'd organize a cross-language monorepo which handles all CI/CD concerns and enables developers to focus on the business solution. This currently has an api service (nestjs on node) & a frontend app (svelte + sapper) which uses SSR.
+Personal site monorepo — portfolio, blogs API, and data-store.
 
-## deps
+## structure
 
-You'll need to have [please.build](https://please.build/) installed.
-
----
-
-## platforms
-
-### macOS
-I use [Docker Desktop](https://docs.docker.com/desktop/mac/install/) to run the app locally.
-
-### linux
-
-I use [MicroK8S](https://microk8s.io/) to run the app on Linux.
-
-You'll need to install it and also enable the built-in registry to run the app, which can be done with `microk8s enable registry`
+```
+apps/
+  portfolio/    # SvelteKit static site (GitHub Pages)
+  blogs/        # .NET blogs API
+  data-store/   # photos and other static assets
+```
 
 ---
 
-### inject secrets
+## portfolio — static export & deploy
+
+The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and copied into `apps/portfolio/static/photos/` as part of the build via a `prebuild` npm script.
+
+### deploy to GitHub Pages
+```bash
+cd apps/portfolio
+npm run deploy
+# builds, writes CNAME + .nojekyll, then pushes to the gh-pages branch
+```
+
+---
+
+## local dev (kubernetes)
+
+### deps
+
+- [please.build](https://please.build/) (`plz`)
+- [helm](https://helm.sh/)
+- A running k8s cluster (e.g. [MicroK8S](https://microk8s.io/)) with `~/.kube/config` configured
+
+### inject env vars
 ```bash
 . ./template.envrc
 ```
 
-### create services
-to deploy the app, create the services
-
-```bash
-plz build //apps/...
-plz run parallel //apps/api //apps/docs
-```
-
-### [extra step for linux] push images to docker registry
-Because the images need to be on the microk8s docker registry for this to work, we need to push the images manually. (need to try and automate this later)
-```
-plz run parallel //apps/api:api_push //apps/docs:documentation_push
-```
-
 ### deploy to kubernetes
+Deploys to the `mrsauravsahu-dev` namespace using helm:
+```bash
+plz run //apps/blogs:local
+plz run //apps/data-store:local
+plz run //apps/portfolio:local
 ```
-kubectl apply -f ./.cicd # --> creates the kubernetes namespace
 
-plz run parallel //apps/api/k8s:k8s_push //apps/docs/k8s:k8s_push
+### access the app
+
+- **portfolio** → `http://<node-ip>:30000`
+- **blogs API** → `http://<node-ip>:30001`
+
+Get node IP:
+```bash
+kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'
+```
+
+For WSL, use port-forward instead:
+```bash
+kubectl port-forward -n mrsauravsahu-dev svc/portfolio-svc 3000:80
 ```
 
 ### cleanup
-```
-plz run parallel //apps/api/k8s:k8s_cleanup //apps/docs/k8s:k8s_cleanup
-
-kubectl delete -f .cicd
-```
-
-### access the documentation site
-
-#### on macos
-
-use this command to forward the port from the documentation service
 ```bash
-kubectl port-forward service/docs-svc -n $K8S_NAMESPACE 3000:80
-```
-you can navigate to `http://localhost:8080`
-
-#### on linux
-with microk8s on Linux, the services will directly be available on the NodePort so, no need to use port-forward.
-
-You can get the port with 
-```
-kubectl -n mrsauravsahu describe apps/docs-svc | grep NodePort
+helm uninstall -n mrsauravsahu-dev blogs data-store portfolio
+kubectl delete namespace mrsauravsahu-dev
 ```

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <filter id="glow3">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="wavefade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#00ff88" stop-opacity="0"/>
+      <stop offset="15%"  stop-color="#00ff88" stop-opacity="0.6"/>
+      <stop offset="50%"  stop-color="#00ff88" stop-opacity="1"/>
+      <stop offset="85%"  stop-color="#00ff88" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00ff88" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="wavefade-dim" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#3d7a3d" stop-opacity="0"/>
+      <stop offset="15%"  stop-color="#3d7a3d" stop-opacity="0.4"/>
+      <stop offset="50%"  stop-color="#3d7a3d" stop-opacity="0.7"/>
+      <stop offset="85%"  stop-color="#3d7a3d" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#3d7a3d" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="scan3" x="0" y="0" width="2" height="4" patternUnits="userSpaceOnUse">
+      <rect width="2" height="2" fill="rgba(0,255,136,0.012)"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#050505"/>
+
+  <!-- Horizontal axis line -->
+  <line x1="0" y1="250" x2="800" y2="250" stroke="#1a2a1a" stroke-width="1"/>
+
+  <!-- Vertical guide lines -->
+  <line x1="200" y1="60"  x2="200" y2="440" stroke="#1a2a1a" stroke-width="1" stroke-dasharray="4,8" opacity="0.5"/>
+  <line x1="400" y1="60"  x2="400" y2="440" stroke="#1a2a1a" stroke-width="1" stroke-dasharray="4,8" opacity="0.5"/>
+  <line x1="600" y1="60"  x2="600" y2="440" stroke="#1a2a1a" stroke-width="1" stroke-dasharray="4,8" opacity="0.5"/>
+
+  <!-- Background wave 1 (faint, offset) -->
+  <polyline
+    points="0,250 40,230 80,200 120,170 160,150 200,158 240,175 280,205 320,235 360,255 400,260 440,255 480,235 520,205 560,175 600,158 640,150 680,170 720,200 760,230 800,250"
+    fill="none" stroke="url(#wavefade-dim)" stroke-width="1" opacity="0.4"/>
+
+  <!-- Background wave 2 (faint) -->
+  <polyline
+    points="0,250 50,275 100,310 150,340 200,355 250,348 300,328 350,298 390,268 420,252 450,245 500,248 550,268 600,298 650,328 700,348 750,355 800,340"
+    fill="none" stroke="url(#wavefade-dim)" stroke-width="1" opacity="0.3"/>
+
+  <!-- Main sine wave — bright -->
+  <polyline
+    points="0,250 25,218 50,185 75,157 100,140 125,138 150,150 175,174 200,205 225,234 250,252 275,260 300,255 325,238 350,213 375,188 400,168 425,160 450,165 475,182 500,208 525,233 550,252 575,262 600,258 625,242 650,218 675,194 700,175 725,166 750,170 775,184 800,206"
+    fill="none" stroke="url(#wavefade)" stroke-width="2" filter="url(#glow3)"/>
+
+  <!-- Wave highlight dot at center peak -->
+  <circle cx="425" cy="160" r="5" fill="#00ff88" opacity="0.9" filter="url(#glow3)"/>
+  <circle cx="425" cy="160" r="10" fill="none" stroke="#00ff88" stroke-width="1" opacity="0.35"/>
+
+  <!-- Axis labels -->
+  <text x="12" y="246" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d" opacity="0.7">0</text>
+  <text x="196" y="460" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d" opacity="0.7" text-anchor="middle">π/2</text>
+  <text x="400" y="460" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d" opacity="0.7" text-anchor="middle">π</text>
+  <text x="600" y="460" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d" opacity="0.7" text-anchor="middle">3π/2</text>
+
+  <!-- Amplitude labels -->
+  <text x="12" y="144" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d" opacity="0.7">+1</text>
+  <text x="12" y="362" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d" opacity="0.7">-1</text>
+
+  <!-- Horizontal reference lines -->
+  <line x1="30" y1="140" x2="780" y2="140" stroke="#1a2a1a" stroke-width="1" stroke-dasharray="2,12" opacity="0.4"/>
+  <line x1="30" y1="360" x2="780" y2="360" stroke="#1a2a1a" stroke-width="1" stroke-dasharray="2,12" opacity="0.4"/>
+
+  <!-- Label block top-right -->
+  <rect x="568" y="32" width="200" height="42" fill="#080808" stroke="#1a2a1a" stroke-width="1"/>
+  <text x="578" y="50" font-family="'Courier New',monospace" font-size="9" fill="#00ff88">$ signal --freq 1hz</text>
+  <text x="578" y="65" font-family="'Courier New',monospace" font-size="8" fill="#3d7a3d">amplitude: 1.0  phase: 0</text>
+
+  <!-- Label block bottom-left: formula -->
+  <rect x="32" y="396" width="180" height="42" fill="#080808" stroke="#1a2a1a" stroke-width="1"/>
+  <text x="42" y="414" font-family="'Courier New',monospace" font-size="9" fill="#3d7a3d">f(x) = </text>
+  <text x="88" y="414" font-family="'Courier New',monospace" font-size="9" fill="#00ff88">sin(x)</text>
+  <text x="42" y="430" font-family="'Courier New',monospace" font-size="8" fill="#3d7a3d">continuous · periodic</text>
+
+  <!-- Scanlines -->
+  <rect width="800" height="500" fill="url(#scan3)" pointer-events="none"/>
+
+  <!-- Corner accents -->
+  <line x1="0"   y1="0"   x2="40"  y2="0"   stroke="#00ff88" stroke-width="2" opacity="0.3"/>
+  <line x1="0"   y1="0"   x2="0"   y2="40"  stroke="#00ff88" stroke-width="2" opacity="0.3"/>
+  <line x1="800" y1="500" x2="760" y2="500" stroke="#00ff88" stroke-width="2" opacity="0.3"/>
+  <line x1="800" y1="500" x2="800" y2="460" stroke="#00ff88" stroke-width="2" opacity="0.3"/>
+</svg>
