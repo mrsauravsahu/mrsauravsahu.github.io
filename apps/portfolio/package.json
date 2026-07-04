@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "vite dev",
-    "prebuild": "cp -r ../data-store/photos/. static/photos/",
     "build": "vite build",
     "preview": "svelte-kit preview",
     "export": "npm run build && echo mrsauravsahu.in > build/CNAME && touch build/.nojekyll && rm -f build/.DS_Store",
