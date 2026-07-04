@@ -1,8 +1,83 @@
 <script lang="ts">
+	import { cubicOut } from 'svelte/easing';
 	import BlogPost from '../components/blog-post.svelte';
 	import type { PageData } from './$types';
 	export let data: PageData;
+
+	type Photo = { filename: string; caption: string };
+	let selectedPhoto: Photo | null = null;
+	let topPhoto: number | null = null;
+	let origin = { x: '50%', y: '50%' };
+
+	function zoomFromPhoto(node: Element, { duration = 320 }: { duration?: number } = {}) {
+		const ox = origin.x, oy = origin.y;
+		return {
+			duration,
+			easing: cubicOut,
+			css: (t: number) => `transform: scale(${t}); transform-origin: ${ox} ${oy}; opacity: ${t};`
+		};
+	}
+
+	function openPhoto(e: MouseEvent, photo: Photo) {
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		origin = {
+			x: `${rect.left + rect.width / 2}px`,
+			y: `${rect.top + rect.height / 2}px`,
+		};
+		selectedPhoto = photo;
+	}
+
+	function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape') selectedPhoto = null; }
+
+	type Entry = { cmd: string; output: string };
+	let history: Entry[] = [];
+	let input = '';
+	let inputEl: HTMLInputElement;
+	let terminalBody: HTMLElement;
+
+	const COMMANDS: Record<string, () => string> = {
+		hi:      () => 'hey there',
+		hello:   () => 'hey there',
+		help:    () => [
+			'available commands:',
+			'  hi / hello    say hello',
+			'  whoami        who is this person',
+			'  about         short intro',
+			'  ls            list things',
+			'  date          current date',
+			'  blog          go to writing',
+			'  contact       ways to reach me',
+			'  clear         clear the terminal',
+		].join('\n'),
+		whoami:  () => 'Sahu',
+		about:   () => 'software engineer · photographer · biker\nbuilding things at the intersection of code and craft.',
+		ls:      () => 'about.txt  roles.txt  writing/  photos/  contact.md',
+		date:    () => new Date().toString(),
+		blog:    () => 'head to /blog/1 — or scroll up ↑',
+		contact: () => 'linkedin · github · instagram · email\nscroll to the bottom for links',
+	};
+
+	function run(e: KeyboardEvent) {
+		if (e.key !== 'Enter') return;
+		const cmd = input.trim();
+		input = '';
+		if (!cmd) return;
+
+		if (cmd.toLowerCase() === 'clear') { history = []; return; }
+
+		if (cmd.toLowerCase().startsWith('sudo')) {
+			history = [...history, { cmd, output: 'Permission denied.' }];
+		} else {
+			const handler = COMMANDS[cmd.toLowerCase()];
+			const output = handler ? handler() : `command not found: ${cmd}. try 'help'.`;
+			history = [...history, { cmd, output }];
+		}
+
+		setTimeout(() => terminalBody?.scrollTo({ top: terminalBody.scrollHeight, behavior: 'smooth' }), 10);
+	}
 </script>
+
+<svelte:window on:keydown={onKeydown} />
 
 <svelte:head>
 	<title>@mrsauravsahu</title>
@@ -17,36 +92,47 @@
 				<span class="dot red"></span>
 				<span class="dot yellow"></span>
 				<span class="dot green"></span>
-				<span class="terminal-title">mrsauravsahu — bash</span>
+				<span class="terminal-title">zsh</span>
 			</div>
-			<div class="terminal-body">
-				<p class="terminal-line"><span class="prompt">~</span> whoami</p>
-				<h1 class="terminal-output name fade-up">Saurav Sahu</h1>
-				<p class="terminal-line"><span class="prompt">~</span> cat roles.txt</p>
+			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+			<div class="terminal-body" bind:this={terminalBody} on:click={() => inputEl?.focus()}>
+				<p class="terminal-line"><span class="prompt">$</span> whoami</p>
+				<h1 class="terminal-output name fade-up">Sahu</h1>
+				<p class="terminal-line"><span class="prompt">$</span> cat roles.txt</p>
 				<p class="terminal-output roles fade-up">
 					software engineer by profession,<br />
 					photographer &amp; explorer,<br />
 					biker at heart.
 				</p>
-				<p class="terminal-line cursor-line"><span class="prompt">~</span> <span class="cursor">▋</span></p>
+
+				{#each history as entry}
+					<p class="terminal-line"><span class="prompt">$</span> {entry.cmd}</p>
+					<pre class="terminal-output history-output">{entry.output}</pre>
+				{/each}
+
+				<div class="terminal-line cursor-line">
+					<span class="prompt">$</span>
+					<span class="terminal-display">{input}<span class="cursor">▋</span></span>
+					<input
+						bind:this={inputEl}
+						bind:value={input}
+						on:keydown={run}
+						class="terminal-input-hidden"
+						autocomplete="off"
+						autocorrect="off"
+						spellcheck="false"
+					/>
+				</div>
 			</div>
 		</div>
 	</div>
 </section>
 
-<!-- ── Divider strip ──────────────────────────────────────── -->
-<div class="photo-strip">
-	<img src="/photos/20260423_211201.jpg" alt="" aria-hidden="true" class="rotated-strip" />
-	<div class="strip-overlay">
-		<span class="strip-tag">// EOF hero section</span>
-	</div>
-</div>
-
 <!-- ── Writing / Recents ──────────────────────────────────── -->
 <section class="writing" id="writing">
 	<div class="section-inner">
 		<p class="section-label">cat writing.md</p>
-		<h2 class="section-title">// things I've been<br />thinking about.</h2>
+		<h2 class="section-title">things I've been<br />thinking about.</h2>
 		<p class="section-body">
 			A decade of shipping software, riding roads, and making photographs. These are the notes from
 			the journey — mostly technical, always honest.
@@ -54,79 +140,86 @@
 
 		<div class="blog-grid">
 			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
-				<BlogPost {blog} />
+				<BlogPost {blog} fallbackSrc={null} />
 			{:else}
 				<p class="no-posts"><span class="prompt">!</span> blogs API offline. run docker-compose up to load posts.</p>
 			{/each}
 		</div>
 
-		<a class="read-more" href="/blog/1">ls -la posts/ <span class="arrow">→</span></a>
+		<a class="read-more" href="/blog/1"><span class="prompt">$</span> ls -la posts/ <span class="arrow">→</span></a>
 	</div>
 </section>
 
 <!-- ── Divider strip 2 ────────────────────────────────────── -->
 <div class="photo-strip">
 	<img src="/photos/20260428_190024.jpg" alt="" aria-hidden="true" />
-	<div class="strip-overlay">
-		<span class="strip-tag">// EOF writing section</span>
-	</div>
 </div>
 
 <!-- ── Beyond Code ────────────────────────────────────────── -->
 <section class="beyond" id="beyond">
 	<div class="section-inner">
 		<p class="section-label">cat beyond-code.json</p>
-		<h2 class="section-title">// the rest of the picture.</h2>
+		<h2 class="section-title">the rest of the picture.</h2>
 
-		<div class="beyond-grid">
-			<div class="beyond-text">
-				<div class="beyond-block">
-					<p class="beyond-block-label"><span class="brace">{"{"}</span> "photographer" <span class="brace">{"}"}</span></p>
-					<p class="beyond-block-body">
-						I shoot with available light and bad timing. The interesting frames are always the ones
-						you nearly missed.
-					</p>
-				</div>
-				<div class="beyond-block">
-					<p class="beyond-block-label"><span class="brace">{"{"}</span> "creator" <span class="brace">{"}"}</span></p>
-					<p class="beyond-block-body">
-						Notebooks, tools, side projects — I make things because I can't help it. Half of them
-						ship. The other half teach me more.
-					</p>
-				</div>
-				<div class="beyond-block">
-					<p class="beyond-block-label"><span class="brace">{"{"}</span> "biker" <span class="brace">{"}"}</span></p>
-					<p class="beyond-block-body">
-						Long roads clear the mind. There's something about committing to a direction and just
-						riding that solves problems code can't.
-					</p>
-				</div>
+		<div class="beyond-topics">
+			<div class="beyond-block">
+				<p class="beyond-block-label"><span class="brace">{"{"}</span> "topic": "photography" <span class="brace">{"}"}</span></p>
+				<p class="beyond-block-body">
+					I shoot with available light and bad timing. The interesting frames are always the ones
+					you nearly missed.
+				</p>
 			</div>
+			<div class="beyond-block">
+				<p class="beyond-block-label"><span class="brace">{"{"}</span> "topic": "creating" <span class="brace">{"}"}</span></p>
+				<p class="beyond-block-body">
+					Notebooks, tools, side projects — I make things because I can't help it. Half of them
+					ship. The other half teach me more.
+				</p>
+			</div>
+			<div class="beyond-block">
+				<p class="beyond-block-label"><span class="brace">{"{"}</span> "topic": "biking" <span class="brace">{"}"}</span></p>
+				<p class="beyond-block-body">
+					Long roads clear the mind. There's something about committing to a direction and just
+					riding that solves problems code can't.
+				</p>
+			</div>
+		</div>
 
-			<div class="mosaic">
-				<div class="mosaic-item wide">
-					<img src="/photos/20260425_124242.jpg" alt="Photography" class="rotated" />
-					<span class="mosaic-caption">// through the lens</span>
-				</div>
-				<div class="mosaic-item">
-					<img src="/photos/20260421_200511.jpg" alt="On the road" class="rotated" />
-					<span class="mosaic-caption">// on the road</span>
-				</div>
-				<div class="mosaic-item">
-					<img src="/photos/20260430_183200.jpg" alt="Making things" />
-					<span class="mosaic-caption">// making things</span>
-				</div>
-			</div>
+		<div class="photo-dump">
+			{#each (data.photos ?? []) as photo, i}
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<button class="dump-item" class:on-top={topPhoto === i} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => topPhoto = i} on:click={(e) => openPhoto(e, photo)}>
+					<div class="inner">
+						<div class="tile-frame">
+							<img src="/photos/{photo.filename}" alt={photo.caption} />
+						</div>
+						<span class="tile-label">{photo.caption}</span>
+					</div>
+				</button>
+			{/each}
 		</div>
 	</div>
 </section>
 
+<!-- ── Photo modal ───────────────────────────────────────── -->
+{#if selectedPhoto}
+	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+	<div class="modal-backdrop" transition:zoomFromPhoto={{ duration: 320 }} on:click={() => selectedPhoto = null}>
+		<div class="modal-frame" on:click|stopPropagation>
+			<img src="/photos/{selectedPhoto.filename}" alt={selectedPhoto.caption} class="modal-img" />
+			{#if selectedPhoto.caption}
+				<p class="modal-caption">{selectedPhoto.caption}</p>
+			{/if}
+		</div>
+	</div>
+{/if}
+
 <!-- ── Contact ────────────────────────────────────────────── -->
 <section class="contact" id="contact">
 	<div class="section-inner">
-		<h2 class="contact-heading">// let's connect.</h2>
-		<p class="contact-prompt"><span class="prompt">~</span> open --channel</p>
-		<div class="contact-links">
+		<p class="section-label">cat contact.md</p>
+		<h2 class="contact-heading">let's connect.</h2>
+<div class="contact-links">
 			<a href="https://www.linkedin.com/in/mrsauravsahu" target="_blank" rel="noopener">linkedin</a>
 			<a href="https://github.com/mrsauravsahu" target="_blank" rel="noopener">github</a>
 			<a href="https://instagram.com/explorewithsahu" target="_blank" rel="noopener">instagram</a>
@@ -140,8 +233,8 @@
 
 <!-- ── Footer ─────────────────────────────────────────────── -->
 <footer>
-	<p>// SvelteKit · .NET · Node.js</p>
-	<p>Made with care — Sahu <span class="cursor-sm">▋</span></p>
+	<p>SvelteKit · .NET · Node.js</p>
+	<p>Keep on coding — Sahu, S <span class="cursor-sm">▋</span></p>
 </footer>
 
 <style>
@@ -178,6 +271,10 @@
 	}
 
 	/* ── Terminal window ──────────────────────────────── */
+	.terminal-body, .terminal-body * {
+		font-family: var(--font-mono);
+	}
+
 	.terminal-window {
 		border: 1px solid var(--accent-dim);
 		background: rgba(0, 0, 0, 0.85);
@@ -215,10 +312,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		max-height: 55vh;
+		overflow-y: auto;
+		scrollbar-width: none;
 	}
 
+	.terminal-body::-webkit-scrollbar { display: none; }
+
 	.terminal-line {
-		font-family: var(--font-mono);
 		font-size: 0.85rem;
 		color: var(--text-muted);
 		display: flex;
@@ -232,7 +333,6 @@
 	}
 
 	.terminal-output {
-		font-family: var(--font-mono);
 		padding-left: 1.25rem;
 		margin-bottom: 0.75rem;
 	}
@@ -255,10 +355,31 @@
 
 	.cursor-line { margin-top: 0.25rem; }
 
+	.terminal-input-hidden {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+		width: 1px;
+		height: 1px;
+	}
+
+	.terminal-display {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
 	.cursor {
 		color: var(--accent);
 		animation: blink 1s step-end infinite;
-		font-weight: 300;
+	}
+
+	.history-output {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		white-space: pre-wrap;
+		padding-left: 1.25rem;
+		margin-bottom: 0.5rem;
+		line-height: 1.7;
 	}
 
 	@keyframes blink {
@@ -317,23 +438,7 @@
 		background: linear-gradient(to top, var(--bg), transparent);
 	}
 
-	.strip-overlay {
-		position: absolute;
-		inset: 0;
-		z-index: 2;
-		display: flex;
-		align-items: flex-end;
-		padding: 0.75rem 1.5rem;
-	}
-
-	.strip-tag {
-		font-family: var(--font-mono);
-		font-size: 0.65rem;
-		color: var(--text-muted);
-		letter-spacing: 0.05em;
-	}
-
-	/* ── Writing ──────────────────────────────────────── */
+/* ── Writing ──────────────────────────────────────── */
 	.writing {
 		background: var(--surface);
 	}
@@ -378,18 +483,11 @@
 		background: var(--bg);
 	}
 
-	.beyond-grid {
+	.beyond-topics {
 		display: grid;
-		grid-template-columns: 2fr 3fr;
-		gap: 5rem;
-		align-items: center;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 3rem;
 		margin-top: 3rem;
-	}
-
-	.beyond-text {
-		display: flex;
-		flex-direction: column;
-		gap: 2.5rem;
 	}
 
 	.beyond-block-label {
@@ -410,93 +508,128 @@
 		line-height: 1.75;
 	}
 
-	/* ── Mosaic ───────────────────────────────────────── */
-	.mosaic {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.75rem;
-	}
-
-	.mosaic-item {
-		position: relative;
+	/* ── Photo dump ───────────────────────────────────── */
+	.photo-dump {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		margin-top: 4rem;
+		padding: 1.5rem;
 		overflow: hidden;
-		background: var(--surface-alt);
-		border: 1px solid var(--border);
 	}
 
-	.mosaic-item::before {
-		content: '';
+	.dump-item {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		width: calc(20% - 1rem);
+		margin: -0.6rem;
+		position: relative;
+		z-index: 1;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
+	}
+
+	.dump-item { transform: rotate(calc(var(--rot) * 1deg)); }
+
+	.dump-item:hover {
+		transform: rotate(0deg) scale(1.12) !important;
+		z-index: 20;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s;
+	}
+
+	.dump-item.on-top {
+		z-index: 10;
+	}
+
+	.dump-item .inner {
+		background: #ede9e2;
+		padding: 0.5rem 0.5rem 1.75rem;
+		box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+		transition: box-shadow 0.2s ease;
+	}
+
+	.dump-item:hover .inner {
+		box-shadow: 8px 8px 24px rgba(0,0,0,0.7);
+	}
+
+	.tile-frame {
+		overflow: hidden;
+		width: 100%;
+		padding-top: 75%;
+		position: relative;
+	}
+
+	.tile-frame img {
 		position: absolute;
 		inset: 0;
-		border: 1px solid transparent;
-		transition: border-color 0.3s ease;
-		z-index: 2;
-		pointer-events: none;
-	}
-
-	.mosaic-item:hover::before {
-		border-color: var(--accent-dim);
-	}
-
-	.mosaic-item.wide {
-		grid-column: 1 / -1;
-		aspect-ratio: 16 / 7;
-	}
-
-	.mosaic-item:not(.wide) { aspect-ratio: 4 / 3; }
-
-	.mosaic-item img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 		object-position: center;
-		opacity: 0.5;
-		filter: grayscale(80%) sepia(20%);
-		transition: opacity 0.4s ease, filter 0.4s ease, transform 0.4s ease;
+		display: block;
+		opacity: 0.88;
+		filter: sepia(12%);
+		transition: opacity 0.3s ease, filter 0.3s ease;
 	}
 
-	.mosaic-item img.rotated {
-		width: 200%;
-		height: 200%;
-		margin: -50%;
-		transform: rotate(90deg);
-		transform-origin: center center;
-	}
-
-	.mosaic-item:hover img {
-		opacity: 0.75;
-		filter: grayscale(40%) sepia(10%);
-		transform: scale(1.03);
-	}
-
-	.mosaic-item:hover img.rotated {
-		transform: rotate(90deg) scale(1.03);
-	}
-
-	.mosaic-caption {
-		position: absolute;
-		bottom: 0; left: 0; right: 0;
-		padding: 0.75rem 1rem;
-		background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
-		font-family: var(--font-mono);
-		font-size: 0.65rem;
-		letter-spacing: 0.05em;
-		color: var(--accent);
-		opacity: 0;
-		transform: translateY(4px);
-		transition: opacity 0.3s ease, transform 0.3s ease;
-		z-index: 3;
-	}
-
-	.mosaic-item:hover .mosaic-caption {
+	.dump-item:hover .tile-frame img {
 		opacity: 1;
-		transform: translateY(0);
+		filter: sepia(0%);
+	}
+
+	.tile-label {
+		display: block;
+		text-align: center;
+		margin-top: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.55rem;
+		letter-spacing: 0.08em;
+		color: #555;
+	}
+
+	/* ── Photo modal ──────────────────────────────────── */
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.88);
+		z-index: 200;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 2rem;
+		cursor: zoom-out;
+	}
+
+	.modal-frame {
+		background: #ede9e2;
+		padding: 0.75rem 0.75rem 2.5rem;
+		box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+		max-width: min(90vw, 800px);
+		width: 100%;
+		cursor: default;
+	}
+
+	.modal-img {
+		display: block;
+		width: 100%;
+		height: auto;
+		max-height: 70vh;
+		object-fit: contain;
+	}
+
+	.modal-caption {
+		text-align: center;
+		margin-top: 0.75rem;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		letter-spacing: 0.08em;
+		color: #555;
 	}
 
 	/* ── Contact ──────────────────────────────────────── */
 	.contact {
 		background: var(--surface);
-		text-align: center;
 	}
 
 	.contact-heading {
@@ -508,20 +641,9 @@
 		text-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
 	}
 
-	.contact-prompt {
-		font-family: var(--font-mono);
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		margin-bottom: 2.5rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-	}
-
 	.contact-links {
 		display: flex;
-		justify-content: center;
+		justify-content: flex-start;
 		flex-wrap: wrap;
 		gap: 0;
 	}
@@ -577,23 +699,19 @@
 
 	/* ── Responsive ───────────────────────────────────── */
 	@media (max-width: 768px) {
-		.hero { padding: 0 1rem; align-items: flex-end; padding-bottom: 4rem; }
+		.hero { padding: 0 1rem; align-items: center; }
 
 		.blog-grid {
 			grid-template-columns: 1fr;
 			gap: 3rem;
 		}
 
-		.beyond-grid {
-			grid-template-columns: 1fr;
-			gap: 3rem;
-		}
+		.beyond-topics { grid-template-columns: 1fr; gap: 2rem; }
 
-		.mosaic { grid-template-columns: 1fr; }
-
-		.mosaic-item.wide {
-			grid-column: 1;
-			aspect-ratio: 16 / 9;
+		.dump-item {
+			width: calc(33.33% - 1rem);
+			margin: 0.5rem;
+			transform: rotate(calc(var(--rot) * 2deg));
 		}
 
 		footer { flex-direction: column; gap: 0.5rem; text-align: center; }

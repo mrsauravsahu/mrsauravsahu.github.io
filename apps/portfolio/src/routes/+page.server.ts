@@ -1,8 +1,31 @@
+import { readFile } from 'fs/promises'
+import { join } from 'path'
 import { urqlClient } from '../setup/urql'
 import type { Blog } from '../types/Blog'
 
+type Photo = { filename: string; caption: string }
+
+function parseCsv(content: string): Photo[] {
+  const [, ...rows] = content.trim().split('\n')
+  return rows.map(row => {
+    const comma = row.indexOf(',')
+    return {
+      filename: row.slice(0, comma).trim(),
+      caption: row.slice(comma + 1).trim().replace(/^"|"$/g, ''),
+    }
+  })
+}
+
 export const load = async () => {
   let blogs: Blog[] = []
+  let photos: Photo[] = []
+
+  try {
+    const csv = await readFile(join(process.cwd(), 'static/photos/photos.csv'), 'utf-8')
+    photos = parseCsv(csv).sort(() => Math.random() - 0.5)
+  } catch (e) {
+    console.warn('Could not read photos.csv:', e)
+  }
 
   try {
     let state = {
@@ -43,5 +66,5 @@ export const load = async () => {
     console.warn('Could not fetch blogs from API:', e)
   }
 
-  return { blogs, totalCount: blogs.length }
+  return { blogs, totalCount: blogs.length, photos }
 }

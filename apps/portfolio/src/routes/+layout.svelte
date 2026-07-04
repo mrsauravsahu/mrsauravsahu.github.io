@@ -195,7 +195,7 @@
 		font-family: var(--font-ui);
 		font-size: 0.75rem;
 		letter-spacing: 0.15em;
-		text-transform: uppercase;
+		text-transform: none;
 		color: var(--accent);
 		text-decoration: none;
 		transition: gap 0.2s ease;
