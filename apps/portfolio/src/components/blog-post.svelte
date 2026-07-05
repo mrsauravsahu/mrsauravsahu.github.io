@@ -10,14 +10,24 @@
 </script>
 
 <a class="card" href={`/blog/posts/${blog.id}`}>
-	{#if showCover && (blog.coverImageUrl || fallbackSrc)}
-		<div class="card-img-wrap">
-			<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
+	<div class="terminal-window">
+		<div class="terminal-bar">
+			<span class="dot red"></span>
+			<span class="dot yellow"></span>
+			<span class="dot green"></span>
+			<span class="terminal-title">{blog.id}.md</span>
 		</div>
-	{/if}
-	<p class="meta">{date} · {readTime}</p>
-	<h3 class="title">{blog.title}</h3>
-	<p class="desc">{blog.description}</p>
+		<div class="terminal-body">
+			{#if showCover && (blog.coverImageUrl || fallbackSrc)}
+				<div class="card-img-wrap">
+					<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
+				</div>
+			{/if}
+			<p class="meta">{date} · {readTime}</p>
+			<h3 class="title">{blog.title}</h3>
+			<p class="desc">{blog.description}</p>
+		</div>
+	</div>
 </a>
 
 <style>
@@ -29,6 +39,43 @@
 	}
 
 	.card:hover { transform: translateY(-4px); }
+
+	.terminal-window {
+		border: 1px solid var(--accent-dim);
+		background: rgba(0, 0, 0, 0.85);
+		box-shadow: 0 0 40px rgba(0, 255, 136, 0.08), inset 0 0 60px rgba(0, 0, 0, 0.5);
+		height: 100%;
+	}
+
+	.terminal-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.6rem 1rem;
+		border-bottom: 1px solid var(--border);
+		background: #0d0d0d;
+	}
+
+	.dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+	}
+	.dot.red    { background: #ff5f57; }
+	.dot.yellow { background: #febc2e; }
+	.dot.green  { background: #28c840; }
+
+	.terminal-title {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-size: 0.65rem;
+		color: var(--text-muted);
+		letter-spacing: 0.05em;
+	}
+
+	.terminal-body {
+		padding: 1.25rem 1.5rem 1.5rem;
+	}
 
 	.card-img-wrap {
 		width: 100%;

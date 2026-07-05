@@ -22,21 +22,28 @@
 			{#each blogs as blog (blog.id)}
 				<li class="post-item">
 					<a href={`/blog/posts/${blog.id}`} class="post-link">
-						<div class="bar"></div>
-						<div class="post-content">
-							<p class="post-meta">
-								{DateTime.fromISO(blog.createdAt).toFormat('MMM dd, yyyy')}
-								·
-								{#if Duration.fromISO(blog.approxTimeToRead).minutes <= 1}
-									less than a minute
-								{:else}
-									{Duration.fromISO(blog.approxTimeToRead).minutes} min read
+						<div class="terminal-window">
+							<div class="terminal-bar">
+								<span class="dot red"></span>
+								<span class="dot yellow"></span>
+								<span class="dot green"></span>
+								<span class="terminal-title">{blog.id}.md</span>
+							</div>
+							<div class="post-content">
+								<p class="post-meta">
+									{DateTime.fromISO(blog.createdAt).toFormat('MMM dd, yyyy')}
+									·
+									{#if Duration.fromISO(blog.approxTimeToRead).minutes <= 1}
+										less than a minute
+									{:else}
+										{Duration.fromISO(blog.approxTimeToRead).minutes} min read
+									{/if}
+								</p>
+								<h2 class="post-title">{blog.title}</h2>
+								{#if blog.description}
+									<p class="post-desc">{blog.description}</p>
 								{/if}
-							</p>
-							<h2 class="post-title">{blog.title}</h2>
-							{#if blog.description}
-								<p class="post-desc">{blog.description}</p>
-							{/if}
+							</div>
 						</div>
 					</a>
 				</li>
@@ -65,34 +72,57 @@
 	.posts {
 		list-style: none;
 		margin-top: 4rem;
-		border-top: 1px solid var(--border);
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
 	}
 
-	.post-item {
-		border-bottom: 1px solid var(--border);
-	}
+	.post-item { }
 
 	.post-link {
-		display: flex;
-		align-items: stretch;
-		gap: 1.5rem;
 		text-decoration: none;
-		padding: 2rem 0;
-		position: relative;
+		display: block;
+		transform: translateY(0);
+		transition: transform 0.2s ease-out;
 	}
 
-	.bar {
-		width: 3px;
-		background: var(--accent);
-		transform: scaleY(0);
-		transform-origin: top;
-		transition: transform 0.25s ease;
-		flex-shrink: 0;
+	.post-link:hover { transform: translateY(-3px); }
+
+	.terminal-window {
+		border: 1px solid var(--accent-dim);
+		background: rgba(0, 0, 0, 0.85);
+		box-shadow: 0 0 40px rgba(0, 255, 136, 0.08), inset 0 0 60px rgba(0, 0, 0, 0.5);
 	}
 
-	.post-link:hover .bar { transform: scaleY(1); }
+	.terminal-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.6rem 1rem;
+		border-bottom: 1px solid var(--border);
+		background: #0d0d0d;
+	}
 
-	.post-content { flex: 1; }
+	.dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+	}
+	.dot.red    { background: #ff5f57; }
+	.dot.yellow { background: #febc2e; }
+	.dot.green  { background: #28c840; }
+
+	.terminal-title {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-size: 0.65rem;
+		color: var(--text-muted);
+		letter-spacing: 0.05em;
+	}
+
+	.post-content {
+		padding: 1.25rem 1.5rem 1.5rem;
+	}
 
 	.post-meta {
 		font-family: var(--font-ui);
