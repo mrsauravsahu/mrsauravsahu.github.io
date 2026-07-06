@@ -12,7 +12,7 @@ image:
   repository: node
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "18.11.0"
+  tag: "24"
 
 pod:
   # command: ["tail", "-f", "/dev/null"]
