@@ -1,8 +1,17 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { DateTime, Duration } from 'luxon';
 	import type { PageData } from './$types';
 	export let data: PageData;
 	$: ({ blogs, currentPage, lastPage } = data);
+
+	let postsEl: HTMLUListElement;
+
+	onMount(() => {
+		const cards = Array.from(postsEl.querySelectorAll<HTMLElement>('.terminal-window'));
+		const maxH = Math.max(...cards.map(c => c.offsetHeight));
+		cards.forEach(c => (c.style.minHeight = maxH + 'px'));
+	});
 </script>
 
 <svelte:head>
@@ -18,7 +27,7 @@
 			These are the notes from the journey.
 		</p>
 
-		<ul class="posts">
+		<ul class="posts" bind:this={postsEl}>
 			{#each blogs as blog (blog.id)}
 				<li class="post-item">
 					<a href={`/blog/posts/${blog.id}`} class="post-link">
