@@ -47,6 +47,12 @@ plz run //apps/data-store:local
 plz run //apps/portfolio:local
 ```
 
+### deploy a worktree to kubernetes
+When working in a git worktree, pass `PROJECT_ROOT` explicitly so helm resolves paths from the worktree directory:
+```bash
+PROJECT_ROOT=$(pwd) plz run //apps/portfolio:local
+```
+
 ### access the app
 
 Port-forward the services to localhost:
