@@ -42,8 +42,8 @@
 
 	.terminal-window {
 		border: 1px solid var(--accent-dim);
-		background: rgba(0, 0, 0, 0.85);
-		box-shadow: 0 0 40px rgba(0, 255, 136, 0.08), inset 0 0 60px rgba(0, 0, 0, 0.5);
+		background: var(--surface-alt);
+		box-shadow: 0 0 24px rgba(0, 255, 136, 0.06);
 		height: 100%;
 	}
 
@@ -52,8 +52,8 @@
 		align-items: center;
 		gap: 0.4rem;
 		padding: 0.6rem 1rem;
-		border-bottom: 1px solid var(--border);
-		background: #0d0d0d;
+		border-bottom: 1px solid var(--accent-dim);
+		background: #050505;
 	}
 
 	.dot {
