@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { tick } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
 	import { DateTime, Duration } from 'luxon';
 	import type { PageData } from './$types';
 	export let data: PageData;
@@ -7,11 +8,18 @@
 
 	let postsEl: HTMLUListElement;
 
-	onMount(() => {
+	async function equalizeHeights() {
+		await tick();
+		await document.fonts.ready;
+		await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 		const cards = Array.from(postsEl.querySelectorAll<HTMLElement>('.terminal-window'));
+		if (!cards.length) return;
+		cards.forEach(c => (c.style.minHeight = ''));
 		const maxH = Math.max(...cards.map(c => c.offsetHeight));
-		cards.forEach(c => (c.style.minHeight = maxH + 'px'));
-	});
+		cards.forEach(c => (c.style.minHeight = `${maxH}px`));
+	}
+
+	afterNavigate(equalizeHeights);
 </script>
 
 <svelte:head>
@@ -90,11 +98,13 @@
 		.posts { grid-template-columns: 1fr; }
 	}
 
-	.post-item { }
+	.post-item { display: flex; }
 
 	.post-link {
 		text-decoration: none;
-		display: block;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
 		transform: translateY(0);
 		transition: transform 0.2s ease-out;
 	}
@@ -105,6 +115,7 @@
 		border: 1px solid var(--accent-dim);
 		background: var(--surface-alt);
 		box-shadow: 0 0 24px rgba(0, 255, 136, 0.06);
+		flex: 1;
 	}
 
 	.terminal-bar {
