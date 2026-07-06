@@ -66,6 +66,7 @@
 
 	let composing = false;
 	let isTouch = false;
+	let terminalFocused = false;
 
 	onMount(() => {
 		isTouch = window.matchMedia('(hover: none)').matches;
@@ -103,7 +104,7 @@
 <!-- ── Hero ──────────────────────────────────────────────── -->
 <section class="hero">
 <div class="hero-content">
-		<div class="terminal-window">
+		<div class="terminal-window" class:mobile-focused={isTouch && terminalFocused}>
 			<div class="terminal-bar">
 				<span class="dot red"></span>
 				<span class="dot yellow"></span>
@@ -111,7 +112,7 @@
 				<span class="terminal-title">zsh</span>
 			</div>
 			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-			<div class="terminal-body" bind:this={terminalBody} on:click={() => inputEl?.focus()}>
+			<div class="terminal-body" bind:this={terminalBody} on:click={() => { terminalFocused = true; inputEl?.focus(); }}>
 				<p class="terminal-line"><span class="prompt">$</span> whoami</p>
 				<h1 class="terminal-output name fade-up">Sahu</h1>
 				<p class="terminal-line"><span class="prompt">$</span> cat roles.txt</p>
@@ -135,6 +136,8 @@
 						on:keydown={run}
 						on:compositionstart={() => composing = true}
 						on:compositionend={() => composing = false}
+						on:focus={() => { terminalFocused = true; }}
+						on:blur={() => { terminalFocused = false; }}
 						class="terminal-input-hidden"
 						type="text"
 						autocomplete="off"
@@ -384,6 +387,9 @@
 	.cursor {
 		color: var(--accent);
 		animation: blink 1s step-end infinite;
+		display: inline-block;
+		transform: scaleX(2);
+		transform-origin: left;
 	}
 
 	.history-output {
@@ -689,5 +695,23 @@
 		}
 
 		footer { flex-direction: column; gap: 0.5rem; text-align: center; }
+
+		.terminal-window.mobile-focused {
+			position: fixed;
+			top: 4rem; /* sit below the nav bar */
+			left: 1rem;
+			right: 1rem;
+			z-index: 500;
+			animation: slide-up 0.2s ease-out;
+		}
+
+		.terminal-window.mobile-focused .terminal-body {
+			max-height: 45vh;
+		}
+
+		@keyframes slide-up {
+			from { transform: translateY(16px); opacity: 0.7; }
+			to   { transform: translateY(0);   opacity: 1;   }
+		}
 	}
 </style>
