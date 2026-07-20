@@ -31,6 +31,10 @@ export const load = async ({ params }: { params: { page: string } }) => {
 			}
 		`, { skip }).toPromise()
 
+		// urql resolves (rather than rejects) on network/GraphQL errors, so they
+		// must be checked explicitly or they fail silently and blogs end up empty.
+		if (allBlogsResponse.error) throw allBlogsResponse.error
+
 		blogs = allBlogsResponse?.data?.blogsPaginated?.items || []
 		totalCount = 49
 	} catch (e) {
