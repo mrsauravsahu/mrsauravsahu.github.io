@@ -1,114 +1,100 @@
 # Local dev gotchas (k8s on this WSL2 host)
 
-Terse notes for humans and agents debugging "blogs not showing up" or similar
-local-dev breakage. See `README.md` for the normal setup steps.
+Terse notes for debugging "blogs not showing up" style breakage. See
+`README.md` for normal setup.
 
-## Architecture recap
+## Architecture
 
-- `apps/portfolio` — SvelteKit, built with `@sveltejs/adapter-static`. Production
-  (GitHub Pages) is a **static export**: blog data is fetched once at
-  `npm run build` time via GraphQL and baked into the HTML. There is no
-  server at runtime. If the blogs API is unreachable *during the build*, the
-  shipped site silently has no blog posts — nothing fails loudly.
-- `apps/blogs` — .NET 8 / HotChocolate GraphQL API. Reads blog content from
-  CSV-backed "database" files in `apps/data-store/data` (`Blog.csv`, per-post
-  folders). No real database.
-- `apps/data-store` — static file server for photos, and the CSV data blogs
-  reads from.
-- Local dev runs all three in the `mrsauravsahu-dev` k8s namespace via
+- `apps/portfolio` — SvelteKit + `adapter-static`. Prod (GitHub Pages) is a
+  static export: blog data is fetched once at build time and baked into
+  HTML. No runtime server, no re-fetch.
+- `apps/blogs` — .NET 8 / HotChocolate GraphQL. Data source is CSV files in
+  `apps/data-store/data`, not a real DB.
+- `apps/data-store` — static file server for photos + the blogs CSVs.
+- Local dev = all three in `mrsauravsahu-dev` k8s ns via
   `plz run //apps/<app>:local` (hostPath-mounted source, live reload).
 
-## Gotcha 1: blogs pod crash-loops forever after any restart (no NuGet cache)
+## Gotcha 1: blogs pod crash-loops forever after any restart
 
-`apps/blogs` runs via `dotnet watch run` inside `mcr.microsoft.com/dotnet/sdk:8.0`
-with **no persistent volume for `~/.nuget/packages`**. Every pod restart
-(node reboot, WSL restart, `dotnet watch` hot-reload restart) wipes the
-container filesystem, so the *entire* NuGet dependency tree (~40 packages,
-some via HotChocolate) must be re-downloaded from nuget.org before the API
-can even compile. Under load this reliably times out on at least one large
-package, and `dotnet watch` retries the whole restore from scratch — the pod
-can stay in this loop indefinitely. No liveness/readiness probes are defined
-in `LOCAL_DEVELOPMENT` mode, so `kubectl get pods` shows `1/1 Running` the
-whole time, hiding the problem.
+No persistent volume for `~/.nuget/packages`. Every pod restart wipes the
+container, so ~40 NuGet packages must re-download before the API can even
+compile; one timeout resets the whole restore. No liveness probe in
+`LOCAL_DEVELOPMENT`, so `kubectl get pods` shows `1/1 Running` throughout —
+looks healthy, isn't.
 
-**Fix applied**: `apps/blogs/k8s/values.local.yaml` now mounts a persistent
-hostPath volume at `/root/.nuget/packages` (`apps/blogs/.nuget-cache/`,
-gitignored). After the first successful restore, packages survive pod
-restarts and only new/changed packages need the network.
+**Fix**: `values.local.yaml` mounts `apps/blogs/.nuget-cache/` (hostPath) at
+`/root/.nuget/packages`. Survives restarts.
 
-**To check if this is happening**: `kubectl logs -n mrsauravsahu-dev -l
-app.kubernetes.io/name=blogs` — repeated `TimeoutException` /
-`FindPackagesByIdAsync` retries mean it's still restoring.
+**Check**: `kubectl logs -n mrsauravsahu-dev -l app.kubernetes.io/name=blogs`
+— repeated `TimeoutException` = still restoring.
 
-## Gotcha 2: `localhost:30001` silently fails from Node, but curl "works"
+## Gotcha 2: `localhost:30001` hangs from Node, but curl "works"
 
-On this WSL2 host, `kubectl port-forward svc/blogs 30001:80` binds both
-`127.0.0.1` and `[::1]`, but connections to the IPv4 loopback
-(`127.0.0.1`/`localhost` when it resolves to v4) hang and time out — this
-reproduces with plain `curl -4` too, so it's not Node-specific. `curl
-localhost:30001` "works" because curl happens to prefer the IPv6 address,
-masking the problem.
+`kubectl port-forward` binds both `127.0.0.1` and `[::1]`, but IPv4
+loopback connections just hang on this host (`curl -4` hangs too — not
+Node-specific). Plain `curl localhost:...` "works" only because curl prefers
+IPv6, masking it.
 
-**Symptom**: `npm run build`/`npm run dev` produce an empty blog list with
-no error, even though "the API is clearly up" per curl.
+**Symptom**: build/dev produce an empty blog list, no error.
 
-**Workarounds** (pick one):
-- Point `BLOGS_API_URL` / `VITE_BLOGS_BASE_URL` in `apps/portfolio/.env` at
-  `http://[::1]:30001` instead of `http://localhost:30001`.
-- Or skip port-forward entirely and hit the NodePort directly via the node's
-  real interface IP: `http://<node-internal-ip>:30001` (`kubectl get nodes
-  -o wide`). This is what the `:local_static` target below uses implicitly
-  by running the build with blogs reachable however you've configured it.
+**Workaround**: use `http://[::1]:30001` (not `localhost`) in
+`apps/portfolio/.env`, or hit the node's real IP directly
+(`kubectl get nodes -o wide`). Better: see "real export" below — skip host
+networking entirely.
 
-## Gotcha 3: urql swallows network/GraphQL errors — failures are silent
+## Gotcha 3: urql swallows network/GraphQL errors
 
-`@urql/core`'s `.toPromise()` **resolves** (doesn't reject) on network
-errors and GraphQL errors; it puts them in `result.error` instead of
-throwing. The blog-fetching `load` functions in
-`apps/portfolio/src/routes/+page.server.ts` and
-`.../blog/[page]/+page.server.ts` wrapped the query in `try/catch` expecting
-exceptions — which never fired for this failure mode, so `console.warn
-('Could not fetch blogs from API', e)` never printed and the build produced
-an empty (but "successful") blog list with zero diagnostic trace.
+`.toPromise()` resolves (doesn't reject) on network/GraphQL errors — puts
+them in `result.error` instead of throwing. The `try/catch` around blog
+queries in `+page.server.ts` / `blog/[page]/+page.server.ts` never fired for
+this, so failures were 100% silent (empty blog list, no log line).
 
-**Fix applied**: both `load` functions now check `response.error` explicitly
-and `throw` it so the existing catch/log path actually fires.
+**Fix**: both `load` functions now do `if (response.error) throw response.error`.
 
-## Gotcha 4: prerender crawl fails hard if the blog list is empty
+## Gotcha 4: empty blog list = hard build failure
 
-`svelte.config.js` prerenders `/blog/posts/[blogId]` by *crawling links*
-found in already-rendered pages (no `entries()` export). If the blog list
-pages render with zero posts (e.g. because of gotcha 2 or 3), there are no
-`<a href="/blog/posts/...">` links to discover, and the whole
-`npm run build` **hard-fails** with "routes marked as prerenderable but were
-not found while crawling". This is actually useful — it turns the two silent
-bugs above into a loud build failure — but it means a bad build produces
-*no* `build/` output at all, not a stale one.
+`/blog/posts/[blogId]` prerenders by crawling links on already-rendered
+pages (no `entries()`). Zero blog posts → zero links → `npm run build`
+hard-fails ("routes marked prerenderable but not found while crawling").
+Good: turns gotcha 2/3's silent failures loud. Bad: no `build/` output at
+all when it happens, not a stale one.
 
-## Verifying the actual production code path locally: `:local_static`
+## Verify the real prod code path: `:local_static`
 
-The normal `plz run //apps/portfolio:local` target runs `npm run dev`, which
-re-fetches blogs on every request — it does **not** exercise the
-build-time-prerender path that production (GitHub Pages) actually uses, so
-it can look fine locally while the real static export is broken.
-
-To test the real path:
+`plz run //apps/portfolio:local` runs `npm run dev` — re-fetches per
+request, doesn't exercise the build-time prerender path prod actually uses.
+Can look fine locally while the real static export is broken.
 
 ```bash
-cd apps/portfolio
-npm run build        # writes apps/portfolio/build/, needs blogs API reachable
-PROJECT_ROOT=$(pwd)/../.. plz run //apps/portfolio:local_static   # from a worktree; omit PROJECT_ROOT from repo root
+cd apps/portfolio && npm run build
+PROJECT_ROOT=$(pwd)/../.. plz run //apps/portfolio:local_static  # omit PROJECT_ROOT from repo root
 ```
 
-This deploys a second, independent release (`portfolio-static`, NodePort
-`30002`) that serves `apps/portfolio/build/` via nginx —
-`apps/portfolio/k8s/values.local-static.yaml` +
-`apps/portfolio/k8s/nginx.conf`. The custom nginx config adds
-`try_files $uri $uri.html $uri/index.html =404;` because plain nginx does
-**not** replicate GitHub Pages' automatic clean-URL resolution
-(`/blog/1` → `blog/1.html`) — without it every route except `/` 404s even
-on a correct build.
+Deploys nginx (release `portfolio-static`, NodePort `30002`) serving
+`apps/portfolio/build/` — `values.local-static.yaml` + `nginx.conf`. The
+custom nginx conf adds `try_files $uri $uri.html $uri/index.html =404`
+because plain nginx doesn't replicate GitHub Pages' clean-URL resolution
+(`/blog/1` → `blog/1.html`); without it every route but `/` 404s. hostPath
+mount — no redeploy needed after rebuilding.
 
-Rerun `npm run build` + re-run the target whenever you want to check a fresh
-build; the pod picks up the new `build/` directory on the next request (no
-redeploy needed, it's a hostPath mount).
+## Doing the real export/deploy build: inside the cluster, not the host
+
+Gotcha 2's workarounds are easy to forget — that's how the original bug
+shipped. Instead: `kubectl exec` into the running `portfolio` pod and build
+there. It already has `BLOGS_API_URL=http://blogs` (in-cluster DNS, always
+reliable) and is hostPath-mounted to `apps/portfolio`, so output appears on
+the host with no `kubectl cp`.
+
+```bash
+kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
+  'cd /app && npm run export && d=build-$(date +%s) && mv build "$d" && \
+   chown -R $(stat -c "%u:%g" .) "$d" && echo "OUT_DIR=$d"'
+```
+
+- Container runs as root → output would be undeletable by you without the
+  `chown` (uses `/app`'s host-owning uid:gid).
+- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't
+  clobber each other. `gh-pages`/`npm run deploy` expect plain `build/` —
+  rename, or point `gh-pages -d` at the timestamped dir.
+- Spot-check without touching k8s: `npx http-server apps/portfolio/build-<epoch> -p 8080`.
+  Doesn't replicate clean-URL routing though — use `:local_static` for that.
