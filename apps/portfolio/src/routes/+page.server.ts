@@ -86,6 +86,10 @@ export const load = async () => {
           }
       `, { after: state.endCursor }).toPromise()
 
+      // urql resolves (rather than rejects) on network/GraphQL errors, so they
+      // must be checked explicitly or they fail silently and blogs end up empty.
+      if (allBlogsResponse.error) throw allBlogsResponse.error
+
       blogs = [...blogs, ...(allBlogsResponse?.data?.blogs?.nodes || [])]
       state = {
         hasNextPage: allBlogsResponse?.data?.blogs?.pageInfo?.hasNextPage || false,

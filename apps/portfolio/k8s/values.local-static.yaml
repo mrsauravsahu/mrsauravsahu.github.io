@@ -1,0 +1,81 @@
+# Serves the adapter-static export (apps/portfolio/build) via nginx.
+# This exercises the same code path as production (GitHub Pages): blog data
+# is fetched once at `npm run build` time and baked into static HTML, unlike
+# the dev-server target (:local) which re-fetches on every request.
+#
+# Run `npm run build` in apps/portfolio *before* deploying this so the
+# mounted build/ directory is up to date.
+
+replicaCount: 1
+
+enableOpenTelemetry: false
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "alpine"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+environment: LOCAL_DEVELOPMENT
+
+pod:
+  annotations: {}
+  volumes:
+    - name: static-build
+      hostPath:
+        pathPrefix: apps/portfolio/build
+    - name: nginx-conf
+      hostPath:
+        pathPrefix: apps/portfolio/k8s/nginx.conf
+  volumeMounts:
+    - mountPath: /usr/share/nginx/html
+      name: static-build
+      readOnly: true
+    - mountPath: /etc/nginx/conf.d/default.conf
+      name: nginx-conf
+      readOnly: true
+  env:
+    - name: NGINX_ENTRYPOINT_QUIET_LOGS
+      value: "1"
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30002
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

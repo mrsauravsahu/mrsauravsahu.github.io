@@ -38,11 +38,16 @@ pod:
     - name: data
       hostPath:
         pathPrefix: apps/data-store
+    - name: nuget-cache
+      hostPath:
+        pathPrefix: apps/blogs/.nuget-cache
   volumeMounts:
     - mountPath: /app
       name: code
     - mountPath: /store
       name: data
+    - mountPath: /root/.nuget/packages
+      name: nuget-cache
   env:
     - name: ASPNETCORE_ENVIRONMENT
       value: DEVELOPMENT
