@@ -112,3 +112,42 @@ on a correct build.
 Rerun `npm run build` + re-run the target whenever you want to check a fresh
 build; the pod picks up the new `build/` directory on the next request (no
 redeploy needed, it's a hostPath mount).
+
+## Running the real export/deploy build: do it inside the cluster, not on the host
+
+Gotcha 2's `[::1]`/node-IP workarounds are fragile and easy to forget (that's
+literally how the original "blogs not showing" bug shipped). The reliable
+fix: don't build on the host at all — `kubectl exec` into the already-running
+`portfolio` dev pod and run the export there. Inside the cluster,
+`BLOGS_API_URL=http://blogs` (in-cluster Service DNS, set by
+`values.local.yaml`) always resolves correctly — no localhost/NodePort/WSL2
+networking involved.
+
+```bash
+kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
+  'cd /app && npm run export && d=build-$(date +%s) && mv build "$d" && \
+   chown -R $(stat -c "%u:%g" .) "$d" && echo "OUT_DIR=$d"'
+```
+
+Notes:
+- `/app` is hostPath-mounted straight to `apps/portfolio` on the host, so the
+  output directory appears on the host with **no `kubectl cp` needed** — the
+  mount is bidirectional.
+- The container runs as root, so output would otherwise land root-owned and
+  undeletable by your host user; the `chown` step (using `/app`'s owning
+  uid:gid, since that's bind-mounted from the host) fixes that.
+- Output goes to a fresh `build-<unix-epoch>/` each run (gitignored via
+  `build-*`) instead of overwriting `build/`, so you can compare/keep runs.
+  `npm run deploy`/`gh-pages` still expects a plain `build/` dir — rename
+  before deploying, or point `gh-pages -d` at the timestamped dir directly.
+
+**Quick spot-check** without deploying `:local_static` to k8s at all:
+
+```bash
+npx http-server apps/portfolio/build-<epoch> -p 8080
+```
+
+Then open `localhost:8080`. Good enough for eyeballing blog cards/content;
+use the `:local_static` nginx target instead if you need to verify
+clean-URL routing (`/blog/1` vs `/blog/1.html`), since `http-server` doesn't
+replicate GitHub Pages' extension-less URL resolution either.
