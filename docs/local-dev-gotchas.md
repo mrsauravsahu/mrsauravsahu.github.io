@@ -98,3 +98,26 @@ kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
   rename, or point `gh-pages -d` at the timestamped dir.
 - Spot-check without touching k8s: `npx http-server apps/portfolio/build-<epoch> -p 8080`.
   Doesn't replicate clean-URL routing though — use `:local_static` for that.
+
+## Gotcha 5: `~/.kube/config` points at a dead endpoint; cluster is on :16443
+
+`~/.kube/config` targets `https://127.0.0.1:6443`, but the actual microk8s
+API server listens on `https://<node-ip>:16443` (`ss -tlnp | grep 16443`).
+So plain `kubectl`/`helm`/`plz` fail with `connection refused` on 6443 while
+`microk8s kubectl get nodes` works fine. `multipass list` is empty — there is
+no VM; the cluster is **host microk8s on this WSL2 box**, and the `:6443`
+entry is stale.
+
+**Non-destructive fix** (don't overwrite `~/.kube/config`): point tooling at a
+generated config via env only —
+
+```bash
+microk8s config > /tmp/mk8s.kubeconfig
+export KUBECONFIG=/tmp/mk8s.kubeconfig
+# now plz/helm/kubectl reach the cluster; deploy per README, then:
+# helm uninstall -n mrsauravsahu-dev blogs data-store portfolio portfolio-static
+```
+
+`plz run //apps/<app>:local` still needs `PROJECT_ROOT=<repo-root>` and
+`PROJECT_NAME=mrsauravsahu` exported (helm `--set helpers.PROJECT_ROOT`, ns
+`${PROJECT_NAME}-dev`).

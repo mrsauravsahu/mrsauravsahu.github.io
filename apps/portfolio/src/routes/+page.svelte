@@ -8,8 +8,16 @@
 	import type { PageData } from './$types';
 	export let data: PageData;
 
-	type Photo = { filename: string; caption: string };
+	type Photo = { filename: string; caption: string; thumb: string; full: string };
 	let selectedPhoto: Photo | null = null;
+
+	// Optimized derivatives are generated at build time only. In `npm run dev`
+	// they don't exist, so fall back to the original once.
+	function fallbackToOriginal(e: Event, photo: Photo) {
+		const img = e.currentTarget as HTMLImageElement;
+		const original = `/photos/${photo.filename}`;
+		if (!img.src.endsWith(original)) img.src = original;
+	}
 	let topPhoto: number | null = null;
 	let origin = { x: '50%', y: '50%' };
 
@@ -189,7 +197,7 @@
 				<button class="dump-item" class:on-top={topPhoto === i} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => topPhoto = i} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
-							<img src="/photos/{photo.filename}" alt={photo.caption} />
+							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" on:error={(e) => fallbackToOriginal(e, photo)} />
 						</div>
 						<span class="tile-label">{photo.caption}</span>
 					</div>
@@ -227,7 +235,7 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 	<div class="modal-backdrop" transition:zoomFromPhoto={{ duration: 320 }} on:click={() => selectedPhoto = null}>
 		<div class="modal-frame" on:click|stopPropagation>
-			<img src="/photos/{selectedPhoto.filename}" alt={selectedPhoto.caption} class="modal-img" />
+			<img src={selectedPhoto.full} alt={selectedPhoto.caption} class="modal-img" decoding="async" on:error={(e) => fallbackToOriginal(e, selectedPhoto)} />
 			{#if selectedPhoto.caption}
 				<p class="modal-caption">{selectedPhoto.caption}</p>
 			{/if}
