@@ -15,14 +15,31 @@ apps/
 
 ## portfolio — static export & deploy
 
-The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and symlinked into `apps/portfolio/static/photos/`.
+The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and symlinked into `apps/portfolio/static/photos/`. At build time they are downsized to WebP derivatives under `static/photos-opt/` (grid + modal); the site never serves the multi-MB originals — see [`docs/photo-optimization.md`](docs/photo-optimization.md).
 
 ### deploy to GitHub Pages
 ```bash
 cd apps/portfolio
-npm run deploy
-# builds, writes CNAME + .nojekyll, then pushes to the gh-pages branch
+npm run deploy            # runs export (build) then pushes build/ to gh-pages
+# export writes CNAME (mrsauravsahu.in) + .nojekyll; deploy force-pushes to the gh-pages branch
 ```
+
+**The build fetches blog data at build time** (baked into static HTML), so a
+reachable blogs GraphQL API is required or the build hard-fails (empty blog
+list → prerender crawl error; see [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 4).
+Point `apps/portfolio/.env` at it:
+
+```bash
+# Local k8s: use the node IP + NodePort, NOT localhost — host→cluster loopback
+# hangs on this box (docs/local-dev-gotchas.md Gotcha 2). Get the node IP with
+# `kubectl get nodes -o wide`; blogs is NodePort 30001.
+echo 'BLOGS_API_URL=http://<node-ip>:30001' > apps/portfolio/.env
+```
+
+Alternatively, build the export **inside** the portfolio pod (it has
+`BLOGS_API_URL=http://blogs`), which sidesteps host networking entirely — see
+`docs/local-dev-gotchas.md`. Requires push access to `origin` (SSH) for the
+`gh-pages` branch.
 
 ---
 

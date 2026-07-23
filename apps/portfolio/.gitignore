@@ -3,6 +3,7 @@ node_modules
 /.svelte-kit
 /package
 /static/data/blog-posts
+/static/photos-opt
 
 # old .gitignore
 

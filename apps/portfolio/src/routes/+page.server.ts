@@ -3,7 +3,10 @@ import { join } from 'path'
 import { urqlClient } from '../setup/urql'
 import type { Blog } from '../types/Blog'
 
-type Photo = { filename: string; caption: string }
+// `thumb`/`full` point at the build-time WebP derivatives (see
+// scripts/optimize-photos.js). `filename` is the original, kept as an on:error
+// fallback so the grid still works in `npm run dev`, which skips the optimizer.
+type Photo = { filename: string; caption: string; thumb: string; full: string }
 
 function parseCsvRow(row: string): string[] {
   const fields: string[] = []
@@ -51,8 +54,15 @@ export const load = async () => {
       const csv = await readFile(join(photosDir, 'photos.csv'), 'utf-8')
       captions = parseCsvCaptions(csv)
     } catch { /* captions optional */ }
-    photos = files.map(filename => ({ filename, caption: captions.get(filename) ?? '' }))
-      .sort(() => Math.random() - 0.5)
+    photos = files.map(filename => {
+      const base = filename.replace(/\.[^.]+$/, '')
+      return {
+        filename,
+        caption: captions.get(filename) ?? '',
+        thumb: `/photos-opt/thumb/${base}.webp`,
+        full: `/photos-opt/full/${base}.webp`,
+      }
+    }).sort(() => Math.random() - 0.5)
   } catch (e) {
     console.warn('Could not load photos:', e)
   }
