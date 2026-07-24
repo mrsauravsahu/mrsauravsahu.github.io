@@ -24,14 +24,15 @@
 <style>
 	/* ── Tokens ───────────────────────────────────────── */
 	:root {
-		--bg:          #050505;
-		--surface:     #0a0a0a;
-		--surface-alt: #111;
-		--border:      #1a2a1a;
-		--text:        #b8ffb8;
-		--text-muted:  #3d7a3d;
-		--accent:      #00ff88;
-		--accent-dim:  #006633;
+		--bg:          #14110d;
+		--surface:     #1b1712;
+		--surface-alt: #221d17;
+		--mat:         #ede9e2;
+		--border:      #2c2620;
+		--text:        #f2ede4;
+		--text-muted:  #a2988a;
+		--accent:      #d9a441;
+		--accent-dim:  #8a6a2e;
 
 		--font-display: 'Geist Mono', 'Courier New', monospace;
 		--font-ui:      'Geist Mono', 'Courier New', monospace;
@@ -60,25 +61,17 @@
 		overflow-x: hidden;
 	}
 
-	/* ── Scanlines overlay ────────────────────────────── */
+	/* ── Film grain overlay ───────────────────────────── */
+	/* Subtle SVG fractal-noise grain — the warm counterpart to the
+	   old scanlines. Kept very low opacity so prints still read clean. */
 	:global(body::before) {
 		content: '';
 		position: fixed;
 		inset: 0;
 		pointer-events: none;
 		z-index: 9999;
-		background: repeating-linear-gradient(
-			0deg,
-			transparent,
-			transparent 2px,
-			rgba(0, 255, 136, 0.015) 2px,
-			rgba(0, 255, 136, 0.015) 4px
-		);
-	}
-
-	/* ── CRT glow on text ─────────────────────────────── */
-	:global(h1, h2) {
-		text-shadow: 0 0 20px rgba(0, 255, 136, 0.25);
+		opacity: 0.035;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 	}
 
 	/* ── Typography globals ───────────────────────────── */
@@ -120,18 +113,19 @@
 	}
 
 	:global(.section-label) {
-		font-family: var(--font-ui);
-		font-size: 0.72rem;
-		letter-spacing: 0.05em;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
 		color: var(--text-muted);
 		margin-bottom: 2rem;
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.6rem;
 	}
 
 	:global(.section-label::before) {
-		content: '$';
+		content: '—';
 		color: var(--accent);
 	}
 
@@ -166,11 +160,11 @@
 		height: 100%;
 		object-fit: cover;
 		object-position: center 40%;
-		filter: grayscale(20%);
-		transition: filter 0.6s ease;
+		filter: saturate(0.92);
+		transition: filter 0.6s ease, transform 0.6s ease;
 	}
 
-	:global(.photo-strip:hover img) { filter: grayscale(0%); }
+	:global(.photo-strip:hover img) { filter: saturate(1.05); transform: scale(1.02); }
 
 	:global(.photo-strip::after) {
 		content: '';

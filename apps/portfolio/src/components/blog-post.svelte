@@ -10,19 +10,13 @@
 </script>
 
 <a class="card" href={`/blog/posts/${blog.id}`}>
-	<div class="terminal-window">
-		<div class="terminal-bar">
-			<span class="dot red"></span>
-			<span class="dot yellow"></span>
-			<span class="dot green"></span>
-			<span class="terminal-title">{blog.id}.md</span>
-		</div>
-		<div class="terminal-body">
-			{#if showCover && (blog.coverImageUrl || fallbackSrc)}
-				<div class="card-img-wrap">
-					<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
-				</div>
-			{/if}
+	<div class="card-inner">
+		{#if showCover && (blog.coverImageUrl || fallbackSrc)}
+			<div class="card-img-wrap">
+				<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
+			</div>
+		{/if}
+		<div class="card-body">
 			<p class="meta">{date} · {readTime}</p>
 			<h3 class="title">{blog.title}</h3>
 			<p class="desc">{blog.description}</p>
@@ -40,40 +34,17 @@
 
 	.card:hover { transform: translateY(-4px); }
 
-	.terminal-window {
-		border: 1px solid var(--accent-dim);
+	.card-inner {
+		border: 1px solid var(--border);
 		background: var(--surface-alt);
-		box-shadow: 0 0 24px rgba(0, 255, 136, 0.06);
 		height: 100%;
+		overflow: hidden;
+		transition: border-color 0.2s ease;
 	}
 
-	.terminal-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.6rem 1rem;
-		border-bottom: 1px solid var(--accent-dim);
-		background: #050505;
-	}
+	.card:hover .card-inner { border-color: var(--accent-dim); }
 
-	.dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-	}
-	.dot.red    { background: #ff5f57; }
-	.dot.yellow { background: #febc2e; }
-	.dot.green  { background: #28c840; }
-
-	.terminal-title {
-		margin-left: auto;
-		font-family: var(--font-mono);
-		font-size: 0.65rem;
-		color: var(--text-muted);
-		letter-spacing: 0.05em;
-	}
-
-	.terminal-body {
+	.card-body {
 		padding: 1.25rem 1.5rem 1.5rem;
 	}
 
@@ -81,21 +52,20 @@
 		width: 100%;
 		aspect-ratio: 16 / 10;
 		overflow: hidden;
-		margin-bottom: 1rem;
 	}
 
 	.card-img-wrap img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		filter: grayscale(100%);
-		transition: filter 0.4s ease;
+		filter: saturate(0.9);
+		transition: filter 0.4s ease, transform 0.4s ease;
 	}
 
-	.card:hover .card-img-wrap img { filter: grayscale(0%); }
+	.card:hover .card-img-wrap img { filter: saturate(1.05); transform: scale(1.03); }
 
 	.meta {
-		font-family: var(--font-ui);
+		font-family: var(--font-mono);
 		font-size: 0.65rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;

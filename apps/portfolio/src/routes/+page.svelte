@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
 	import BlogPost from '../components/blog-post.svelte';
+	import Terminal from '../components/terminal.svelte';
 	import type { PageData } from './$types';
 	export let data: PageData;
 
@@ -13,7 +13,8 @@
 
 	// Optimized derivatives are generated at build time only. In `npm run dev`
 	// they don't exist, so fall back to the original once.
-	function fallbackToOriginal(e: Event, photo: Photo) {
+	function fallbackToOriginal(e: Event, photo: Photo | null) {
+		if (!photo) return;
 		const img = e.currentTarget as HTMLImageElement;
 		const original = `/photos/${photo.filename}`;
 		if (!img.src.endsWith(original)) img.src = original;
@@ -39,157 +40,43 @@
 		selectedPhoto = photo;
 	}
 
+	// ── Terminal easter egg ────────────────────────────────
+	// The terminal lives here now, summoned two ways: clicking the footer
+	// cursor, or typing the magic word `sudo` anywhere on the page.
+	let terminalOpen = false;
+	let keyBuffer = '';
+	const MAGIC = 'sudo';
+
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') { selectedPhoto = null; return; }
-		if (!isTouch && e.key.length === 1 && !e.metaKey && !e.ctrlKey) inputEl?.focus();
-	}
+		if (terminalOpen) return;
 
-	type Entry = { cmd: string; output: string };
-	let history: Entry[] = [];
-	let input = '';
-	let inputEl: HTMLInputElement;
-	let terminalBody: HTMLElement;
-
-	const COMMANDS: Record<string, () => string> = {
-		hi:      () => 'hey there',
-		hello:   () => 'hey there',
-		help:    () => [
-			'available commands:',
-			'  hi / hello    say hello',
-			'  whoami        who is this person',
-			'  about         short intro',
-			'  ls            list things',
-			'  date          current date',
-			'  blog          go to writing',
-			'  contact       ways to reach me',
-			'  clear         clear the terminal',
-		].join('\n'),
-		whoami:  () => 'Sahu',
-		about:   () => 'software engineer · photographer · biker\nbuilding things at the intersection of code and craft.',
-		ls:      () => 'about.txt  roles.txt  writing/  photos/  contact.md',
-		date:    () => new Date().toString(),
-		blog:    () => 'head to /blog/1 — or scroll up ↑',
-		contact: () => 'linkedin · github · instagram · email\nscroll to the bottom for links',
-	};
-
-	let composing = false;
-	let isTouch = false;
-	let terminalFocused = false;
-
-	onMount(() => {
-		isTouch = window.matchMedia('(hover: none)').matches;
-		if (!isTouch) inputEl?.focus();
-	});
-
-	function run(e: KeyboardEvent) {
-		if (composing) return;
-		if (e.key !== 'Enter') return;
-		e.preventDefault();
-		const cmd = input.trim();
-		input = '';
-		if (!cmd) return;
-
-		if (cmd.toLowerCase() === 'clear') { history = []; return; }
-
-		if (cmd.toLowerCase().startsWith('sudo')) {
-			history = [...history, { cmd, output: 'Permission denied.' }];
-		} else {
-			const handler = COMMANDS[cmd.toLowerCase()];
-			const output = handler ? handler() : `command not found: ${cmd}. try 'help'.`;
-			history = [...history, { cmd, output }];
+		const target = e.target as HTMLElement;
+		const typingInField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+		if (!typingInField && e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+			keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-MAGIC.length);
+			if (keyBuffer === MAGIC) { terminalOpen = true; keyBuffer = ''; }
 		}
-
-		setTimeout(() => terminalBody?.scrollTo({ top: terminalBody.scrollHeight, behavior: 'smooth' }), 10);
 	}
 </script>
 
 <svelte:window on:keydown={onKeydown} />
 
 <svelte:head>
-	<title>@mrsauravsahu</title>
+	<title>Sahu — photographs</title>
 </svelte:head>
 
-<!-- ── Hero ──────────────────────────────────────────────── -->
+<!-- ── Hero — The Print Table ─────────────────────────────── -->
 <section class="hero">
-<div class="hero-content">
-		<div class="terminal-window" class:mobile-focused={isTouch && terminalFocused}>
-			<div class="terminal-bar">
-				<span class="dot red"></span>
-				<span class="dot yellow"></span>
-				<span class="dot green"></span>
-				<span class="terminal-title">zsh</span>
-			</div>
-			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-			<div class="terminal-body" bind:this={terminalBody} on:click={() => { terminalFocused = true; inputEl?.focus(); }}>
-				<p class="terminal-line"><span class="prompt">$</span> whoami</p>
-				<h1 class="terminal-output name fade-up">Sahu</h1>
-				<p class="terminal-line"><span class="prompt">$</span> cat roles.txt</p>
-				<p class="terminal-output roles fade-up">
-					software engineer by profession,<br />
-					photographer &amp; explorer,<br />
-					biker at heart.
-				</p>
-
-				{#each history as entry}
-					<p class="terminal-line"><span class="prompt">$</span> {entry.cmd}</p>
-					<pre class="terminal-output history-output">{entry.output}</pre>
-				{/each}
-
-				<div class="terminal-line cursor-line">
-					<span class="prompt">$</span>
-					<span class="terminal-display">{input}<span class="cursor">▋</span></span>
-					<input
-						bind:this={inputEl}
-						bind:value={input}
-						on:keydown={run}
-						on:compositionstart={() => composing = true}
-						on:compositionend={() => composing = false}
-						on:focus={() => { terminalFocused = true; }}
-						on:blur={() => { terminalFocused = false; }}
-						class="terminal-input-hidden"
-						type="text"
-						autocomplete="off"
-						autocorrect="off"
-						autocapitalize="none"
-						spellcheck="false"
-						inputmode="text"
-						enterkeyhint="send"
-					/>
-				</div>
-			</div>
-		</div>
-	</div>
-</section>
-
-<!-- ── Beyond Code ────────────────────────────────────────── -->
-<section class="beyond" id="beyond">
 	<div class="section-inner">
-		<p class="section-label">cat beyond-code.json</p>
-		<h2 class="section-title">the rest of the picture.</h2>
-
-		<div class="beyond-topics">
-			<div class="beyond-block">
-				<p class="beyond-block-label"><span class="brace">{"{"}</span> "topic": "photography" <span class="brace">{"}"}</span></p>
-				<p class="beyond-block-body">
-					I shoot with available light and bad timing. The interesting frames are always the ones
-					you nearly missed.
-				</p>
-			</div>
-			<div class="beyond-block">
-				<p class="beyond-block-label"><span class="brace">{"{"}</span> "topic": "creating" <span class="brace">{"}"}</span></p>
-				<p class="beyond-block-body">
-					Notebooks, tools, side projects — I make things because I can't help it. Half of them
-					ship. The other half teach me more.
-				</p>
-			</div>
-			<div class="beyond-block">
-				<p class="beyond-block-label"><span class="brace">{"{"}</span> "topic": "biking" <span class="brace">{"}"}</span></p>
-				<p class="beyond-block-body">
-					Long roads clear the mind. There's something about committing to a direction and just
-					riding that solves problems code can't.
-				</p>
-			</div>
-		</div>
+		<header class="hero-head">
+			<h1 class="hero-name fade-up">Sahu</h1>
+			<p class="hero-tagline fade-up">photographer · explorer · engineer</p>
+			<p class="hero-intro fade-up">
+				Available light and bad timing. The frames I keep are usually the ones I nearly missed —
+				mountains, streets, and the odd machine, from wherever the road went.
+			</p>
+		</header>
 
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
@@ -204,14 +91,14 @@
 				</button>
 			{/each}
 		</div>
-		<p class="photo-collection-note">a growing collection of memories. more to come soon.</p>
+		<p class="photo-collection-note">my most recent adventure — germany and austria, april 2026. more to come soon ;)</p>
 	</div>
 </section>
 
 <!-- ── Writing / Recents ──────────────────────────────────── -->
 <section class="writing" id="writing">
 	<div class="section-inner">
-		<p class="section-label">cat writing.md</p>
+		<p class="section-label">writing</p>
 		<h2 class="section-title">things I've been thinking about.</h2>
 		<p class="section-body">
 			A decade of shipping software, riding roads, and making photographs. These are the notes from
@@ -220,13 +107,45 @@
 
 		<div class="blog-grid">
 			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
-				<BlogPost {blog} fallbackSrc={null} showCover={false} />
+				<BlogPost {blog} showCover={false} />
 			{:else}
-				<p class="no-posts"><span class="prompt">!</span> blogs API offline. run docker-compose up to load posts.</p>
+				<p class="no-posts">blogs API offline. run docker-compose up to load posts.</p>
 			{/each}
 		</div>
 
-		<a class="read-more" href="/blog/1"><span class="prompt">$</span> ls -la posts/ <span class="arrow">→</span></a>
+		<a class="read-more" href="/blog/1">all posts <span class="arrow">→</span></a>
+	</div>
+</section>
+
+<!-- ── Beyond the Lens ────────────────────────────────────── -->
+<section class="beyond" id="beyond">
+	<div class="section-inner">
+		<p class="section-label">beyond the lens</p>
+		<h2 class="section-title">the rest of the picture.</h2>
+
+		<div class="beyond-topics">
+			<div class="beyond-block">
+				<p class="beyond-block-label">creating</p>
+				<p class="beyond-block-body">
+					Notebooks, tools, side projects — I make things because I can't help it. Half of them
+					ship. The other half teach me more.
+				</p>
+			</div>
+			<div class="beyond-block">
+				<p class="beyond-block-label">on two wheels</p>
+				<p class="beyond-block-body">
+					Long roads clear the mind. There's something about committing to a direction and just
+					riding that solves problems no screen can.
+				</p>
+			</div>
+			<div class="beyond-block">
+				<p class="beyond-block-label">and, yes, code</p>
+				<p class="beyond-block-body">
+					By day I build software. The same attention that frames a photograph goes into a clean
+					system. If you go looking, there's a terminal around here somewhere.
+				</p>
+			</div>
+		</div>
 	</div>
 </section>
 
@@ -246,8 +165,11 @@
 <!-- ── Contact ────────────────────────────────────────────── -->
 <section class="contact" id="contact">
 	<div class="section-inner">
-		<p class="section-label">cat contact.md</p>
+		<p class="section-label">contact</p>
 		<h2 class="contact-heading">let's connect.</h2>
+		<p class="contact-lead">
+			<a href="https://unsplash.com/@mrsauravsahu" target="_blank" rel="noopener">prints &amp; full-res on Unsplash <span class="arrow">→</span></a>
+		</p>
 		<div class="contact-links">
 			<a href="https://www.linkedin.com/in/mrsauravsahu" target="_blank" rel="noopener"><Icon data={faLinkedin} />linkedin</a>
 			<a href="https://github.com/mrsauravsahu" target="_blank" rel="noopener"><Icon data={faGithub} />github</a>
@@ -260,158 +182,55 @@
 	</div>
 </section>
 
-<!-- ── Footer ─────────────────────────────────────────────── -->
+<!-- ── Footer (with hidden terminal trigger) ──────────────── -->
 <footer>
-	<p>SvelteKit · .NET · Node.js</p>
-	<p>Keep on coding — Sahu, S <span class="cursor-sm">▋</span></p>
+	<p>photographs made with light · site built with SvelteKit</p>
+	<p>
+		Keep on shooting — Sahu, S
+		<button class="egg-trigger" on:click={() => terminalOpen = true} title="psst — try typing 'sudo'" aria-label="Open terminal">▋</button>
+	</p>
 </footer>
+
+<Terminal bind:open={terminalOpen} />
 
 <style>
 	/* ── Hero ─────────────────────────────────────────── */
 	.hero {
-		position: relative;
-		height: 100vh;
-		min-height: 640px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0 2rem;
-		overflow: hidden;
+		padding-top: 8rem;
+		padding-bottom: 5rem;
 	}
 
-	.hero-content {
-		position: relative;
-		z-index: 2;
-		width: 100%;
-		max-width: 640px;
+	.hero-head {
+		max-width: 40rem;
+		margin-bottom: 3.5rem;
 	}
 
-	/* ── Terminal window ──────────────────────────────── */
-	.terminal-body, .terminal-body * {
-		font-family: var(--font-mono);
-	}
-
-	.terminal-window {
-		border: 1px solid var(--accent-dim);
-		background: rgba(0, 0, 0, 0.85);
-		box-shadow: 0 0 40px rgba(0, 255, 136, 0.08), inset 0 0 60px rgba(0, 0, 0, 0.5);
-	}
-
-	.terminal-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.6rem 1rem;
-		border-bottom: 1px solid var(--border);
-		background: #0d0d0d;
-	}
-
-	.dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-	}
-	.dot.red    { background: #ff5f57; }
-	.dot.yellow { background: #febc2e; }
-	.dot.green  { background: #28c840; }
-
-	.terminal-title {
-		margin-left: auto;
-		font-family: var(--font-mono);
-		font-size: 0.65rem;
-		color: var(--text-muted);
-		letter-spacing: 0.05em;
-	}
-
-	.terminal-body {
-		padding: 1.5rem 1.75rem 2rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		max-height: 55vh;
-		overflow-y: auto;
-		scrollbar-width: none;
-	}
-
-	.terminal-body::-webkit-scrollbar { display: none; }
-
-	.terminal-line {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.prompt {
-		color: var(--accent);
+	.hero-name {
+		font-family: var(--font-display);
+		font-size: clamp(2.6rem, 7vw, 4.5rem);
 		font-weight: 600;
-	}
-
-	.terminal-output {
-		padding-left: 1.25rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.terminal-output.name {
-		font-size: clamp(2rem, 5vw, 3.2rem);
-		font-weight: 700;
 		color: var(--text);
-		line-height: 1.1;
-		animation-delay: 0.1s;
-		text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+		line-height: 1;
+		letter-spacing: 0;
 	}
 
-	.terminal-output.roles {
-		font-size: 0.9rem;
-		color: var(--text-muted);
-		line-height: 1.9;
-		animation-delay: 0.25s;
-	}
-
-	.cursor-line { margin-top: 0.25rem; }
-
-	.terminal-input-hidden {
-		position: fixed;
-		top: -200px;
-		left: 0;
-		width: 100%;
-		height: 48px;
-		opacity: 0;
-		font-size: 16px; /* prevents iOS auto-zoom on focus */
-		border: none;
-		outline: none;
-		background: transparent;
-		color: transparent;
-		caret-color: transparent;
-		pointer-events: none;
-	}
-
-	.terminal-display {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-	}
-
-	.cursor {
+	.hero-tagline {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
 		color: var(--accent);
-		animation: blink 1s step-end infinite;
-		display: inline-block;
-		transform: scaleX(2);
-		transform-origin: left;
+		margin-top: 1rem;
+		animation-delay: 0.1s;
 	}
 
-	.history-output {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		white-space: pre-wrap;
-		padding-left: 1.25rem;
-		margin-bottom: 0.5rem;
+	.hero-intro {
+		font-family: var(--font-ui);
+		font-size: 1.05rem;
 		line-height: 1.7;
-	}
-
-	@keyframes blink {
-		0%, 100% { opacity: 1; }
-		50%       { opacity: 0; }
+		color: var(--text-muted);
+		margin-top: 1.5rem;
+		animation-delay: 0.2s;
 	}
 
 	/* ── Writing ──────────────────────────────────────── */
@@ -420,31 +239,28 @@
 	}
 
 	.section-title {
-		font-family: var(--font-mono);
-		font-size: clamp(1.5rem, 3.5vw, 2.4rem);
+		font-family: var(--font-display);
+		font-size: clamp(1.8rem, 4vw, 2.8rem);
 		font-weight: 600;
 		color: var(--text);
-		line-height: 1.2;
+		line-height: 1.15;
 		margin-bottom: 1.25rem;
-		letter-spacing: -0.02em;
+		letter-spacing: 0;
 	}
 
 	.section-body {
 		font-family: var(--font-ui);
-		font-size: 0.85rem;
-		line-height: 1.85;
+		font-size: 1rem;
+		line-height: 1.8;
 		color: var(--text-muted);
 		max-width: 48rem;
 	}
 
 	.no-posts {
-		font-family: var(--font-ui);
+		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		color: var(--text-muted);
 		grid-column: 1 / -1;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
 	}
 
 	.blog-grid {
@@ -454,7 +270,7 @@
 		margin-top: 3rem;
 	}
 
-	/* ── Beyond ───────────────────────────────────────── */
+	/* ── Beyond the Lens ──────────────────────────────── */
 	.beyond {
 		background: var(--bg);
 	}
@@ -468,20 +284,18 @@
 
 	.beyond-block-label {
 		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: 0.72rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
 		color: var(--accent);
-		margin-bottom: 0.5rem;
-	}
-
-	.brace {
-		color: var(--text-muted);
+		margin-bottom: 0.75rem;
 	}
 
 	.beyond-block-body {
 		font-family: var(--font-ui);
-		font-size: 0.85rem;
+		font-size: 1rem;
 		color: var(--text-muted);
-		line-height: 1.75;
+		line-height: 1.7;
 	}
 
 	/* ── Photo dump ───────────────────────────────────── */
@@ -489,7 +303,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
-		margin-top: 4rem;
+		margin-top: 1rem;
 		padding: 1.5rem;
 		overflow: hidden;
 	}
@@ -519,14 +333,14 @@
 	}
 
 	.dump-item .inner {
-		background: #ede9e2;
+		background: var(--mat);
 		padding: 0.5rem 0.5rem 1.75rem;
-		box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+		box-shadow: 3px 3px 12px rgba(0,0,0,0.55);
 		transition: box-shadow 0.2s ease;
 	}
 
 	.dump-item:hover .inner {
-		box-shadow: 8px 8px 24px rgba(0,0,0,0.7);
+		box-shadow: 10px 10px 28px rgba(0,0,0,0.7);
 	}
 
 	.tile-frame {
@@ -544,14 +358,12 @@
 		object-fit: cover;
 		object-position: center;
 		display: block;
-		opacity: 0.88;
-		filter: sepia(12%);
-		transition: opacity 0.3s ease, filter 0.3s ease;
+		opacity: 0.94;
+		transition: opacity 0.3s ease, transform 0.3s ease;
 	}
 
 	.dump-item:hover .tile-frame img {
 		opacity: 1;
-		filter: sepia(0%);
 	}
 
 	.tile-label {
@@ -561,7 +373,7 @@
 		font-family: var(--font-mono);
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
-		color: #555;
+		color: #6b6257;
 	}
 
 	.photo-collection-note {
@@ -569,7 +381,7 @@
 		margin-top: 3rem;
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.12em;
 		color: var(--text-muted);
 	}
 
@@ -577,7 +389,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0,0,0,0.88);
+		background: rgba(0,0,0,0.9);
 		z-index: 200;
 		display: flex;
 		align-items: center;
@@ -587,7 +399,7 @@
 	}
 
 	.modal-frame {
-		background: #ede9e2;
+		background: var(--mat);
 		padding: 0.75rem 0.75rem 2.5rem;
 		box-shadow: 0 20px 60px rgba(0,0,0,0.8);
 		max-width: min(90vw, 800px);
@@ -609,7 +421,7 @@
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
 		letter-spacing: 0.08em;
-		color: #555;
+		color: #6b6257;
 	}
 
 	/* ── Contact ──────────────────────────────────────── */
@@ -618,17 +430,35 @@
 	}
 
 	.contact-heading {
-		font-family: var(--font-mono);
+		font-family: var(--font-display);
 		font-size: clamp(2rem, 4vw, 3rem);
-		font-weight: 700;
+		font-weight: 600;
 		color: var(--text);
-		margin-bottom: 1rem;
-		text-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+		margin-bottom: 0.75rem;
+		letter-spacing: 0;
 	}
+
+	.contact-lead {
+		margin-bottom: 2rem;
+	}
+
+	.contact-lead a {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		letter-spacing: 0.08em;
+		color: var(--accent);
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		transition: gap 0.2s ease;
+	}
+
+	.contact-lead a:hover { gap: 0.75rem; }
+	.contact-lead .arrow { display: inline-block; }
 
 	.contact-links {
 		display: flex;
-		justify-content: center;
 		flex-wrap: wrap;
 		gap: 0;
 	}
@@ -639,7 +469,8 @@
 		letter-spacing: 0.1em;
 		color: var(--text-muted);
 		text-decoration: none;
-		padding: 0.25rem 1.5rem;
+		padding: 0.25rem 1.5rem 0.25rem 0;
+		margin-right: 1.5rem;
 		position: relative;
 		transition: color 0.2s ease;
 		display: inline-flex;
@@ -651,21 +482,21 @@
 		content: '';
 		position: absolute;
 		bottom: -2px;
-		left: 50%; right: 50%;
+		left: 0; right: 100%;
 		height: 1px;
 		background: var(--accent);
-		transition: left 0.25s ease, right 0.25s ease;
+		transition: right 0.25s ease;
 	}
 
 	.contact-links a:not(:last-child)::after {
 		content: '|';
 		position: absolute;
-		right: -0.1rem;
+		right: 0;
 		color: var(--border);
 	}
 
 	.contact-links a:hover { color: var(--accent); }
-	.contact-links a:hover::before { left: 1.5rem; right: 1.5rem; }
+	.contact-links a:hover::before { right: 1.5rem; }
 
 	/* ── Footer ───────────────────────────────────────── */
 	footer {
@@ -680,14 +511,25 @@
 		color: var(--text-muted);
 	}
 
-	.cursor-sm {
+	.egg-trigger {
+		background: none;
+		border: none;
 		color: var(--accent);
+		font-family: var(--font-mono);
+		font-size: 0.65rem;
+		cursor: pointer;
+		padding: 0 0.15rem;
 		animation: blink 1s step-end infinite;
+	}
+
+	@keyframes blink {
+		0%, 100% { opacity: 1; }
+		50%       { opacity: 0; }
 	}
 
 	/* ── Responsive ───────────────────────────────────── */
 	@media (max-width: 768px) {
-		.hero { padding: 0 1rem; align-items: center; }
+		.hero { padding-top: 6.5rem; }
 
 		.blog-grid {
 			grid-template-columns: 1fr;
@@ -698,28 +540,10 @@
 
 		.dump-item {
 			width: calc(33.33% - 1rem);
-			margin: 0.5rem;
+			margin: -0.5rem;
 			transform: rotate(calc(var(--rot) * 2deg));
 		}
 
 		footer { flex-direction: column; gap: 0.5rem; text-align: center; }
-
-		.terminal-window.mobile-focused {
-			position: fixed;
-			top: 4rem; /* sit below the nav bar */
-			left: 1rem;
-			right: 1rem;
-			z-index: 500;
-			animation: slide-up 0.2s ease-out;
-		}
-
-		.terminal-window.mobile-focused .terminal-body {
-			max-height: 45vh;
-		}
-
-		@keyframes slide-up {
-			from { transform: translateY(16px); opacity: 0.7; }
-			to   { transform: translateY(0);   opacity: 1;   }
-		}
 	}
 </style>
