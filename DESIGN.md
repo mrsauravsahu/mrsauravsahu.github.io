@@ -129,7 +129,9 @@ Everything below is **Geist Mono** (loaded via Google Fonts, `display=swap`). Ro
 **Section label:** `writing` (mono kicker, no `$`)
 **Heading:** display mono, e.g. "things I've been thinking about."
 
-**Everything on the homepage is a Polaroid.** Blog posts are shown as prints too — the same scattered, overlapping, tilted tiles as the photographs, so the whole page reads as one table of prints rather than "photos, then a card grid."
+**Everything is a Polaroid.** Blog posts are shown as prints too — the same scattered, overlapping, tilted tiles as the photographs, so the whole page reads as one table of prints rather than "photos, then a card grid." The same tile is reused on the **`/blog` listing page** (`All posts.`), so writing looks identical wherever it appears — no terminal-window cards remain.
+
+The tile itself is styled as real **Polaroid paper**: a square photo window (like instant film), a thin even border with a heavy bottom "chin", a warm off-white diagonal paper gradient, a faint edge and inset film recess, and a soft drop shadow that deepens on hover.
 
 **Blog Polaroid tile:**
 - Cream mat `--mat`, same padding/shadow/tilt system as photo tiles
