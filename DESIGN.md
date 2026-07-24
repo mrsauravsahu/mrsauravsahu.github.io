@@ -128,13 +128,16 @@ Everything below is **Geist Mono** (loaded via Google Fonts, `display=swap`). Ro
 
 **Section label:** `writing` (mono kicker, no `$`)
 **Heading:** display mono, e.g. "things I've been thinking about."
-**Layout:** 3-column grid desktop, single column mobile.
 
-**Post card:**
-- Cover image when `coverImageUrl` present; no placeholder on the landing page
-- Title in Geist Mono; a thin **amber** hairline grows under the title on hover
-- Date + read time in Geist Mono `--text-muted`
-- Card lifts `translateY(-4px)` on hover
+**Everything on the homepage is a Polaroid.** Blog posts are shown as prints too — the same scattered, overlapping, tilted tiles as the photographs, so the whole page reads as one table of prints rather than "photos, then a card grid."
+
+**Blog Polaroid tile:**
+- Cream mat `--mat`, same padding/shadow/tilt system as photo tiles
+- The cover art is the "photo": `coverImageUrl` when present, otherwise one of the three `blog-cover-{1,2,3}.svg` fallbacks, chosen by position
+- Caption area (below the image) carries the writing metadata rather than a handwritten place: date · read time (small, uppercase mono) then the **title** (mono 600, 2-line clamp), both in dark ink on the mat
+- Tilt randomised per card via `--rot`; overlapping negative margins; hover straightens, scales, and rises to the top — identical behaviour to the photo grid
+- The whole tile is a link to the post (photos open a modal; blog tiles navigate)
+- **Layout:** scattered flex row, ~3 across on desktop, larger and still overlapping on mobile
 
 **Read-more link:** `all posts →` (amber `→` slides right on hover). Lowercase, no `ls -la`, no `$`.
 

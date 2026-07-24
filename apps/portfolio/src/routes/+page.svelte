@@ -105,9 +105,9 @@
 			the journey — mostly technical, always honest.
 		</p>
 
-		<div class="blog-grid">
-			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
-				<BlogPost {blog} showCover={false} />
+		<div class="blog-dump">
+			{#each (data.blogs ?? []).slice(0, 3) as blog, i (blog.id)}
+				<BlogPost {blog} index={i} />
 			{:else}
 				<p class="no-posts">blogs API offline. run docker-compose up to load posts.</p>
 			{/each}
@@ -260,14 +260,18 @@
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		color: var(--text-muted);
-		grid-column: 1 / -1;
+		width: 100%;
+		text-align: center;
 	}
 
-	.blog-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 2rem;
-		margin-top: 3rem;
+	.blog-dump {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: flex-start;
+		margin-top: 3.5rem;
+		padding: 1rem;
+		overflow: hidden;
 	}
 
 	/* ── Beyond the Lens ──────────────────────────────── */
@@ -530,11 +534,6 @@
 	/* ── Responsive ───────────────────────────────────── */
 	@media (max-width: 768px) {
 		.hero { padding-top: 6.5rem; }
-
-		.blog-grid {
-			grid-template-columns: 1fr;
-			gap: 3rem;
-		}
 
 		.beyond-topics { grid-template-columns: 1fr; gap: 2rem; }
 

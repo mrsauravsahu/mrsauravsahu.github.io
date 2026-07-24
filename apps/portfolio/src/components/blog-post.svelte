@@ -1,110 +1,112 @@
 <script>
 	import { DateTime, Duration } from 'luxon';
 	export let blog;
-	export let fallbackSrc = '/img/mrss-silhouette.svg';
-	export let showCover = true;
+	// Position in the grid — picks a fallback cover and seeds the tilt so each
+	// card leans a little differently, like prints dropped on a table.
+	export let index = 0;
 
+	const COVERS = ['/img/blog-cover-1.svg', '/img/blog-cover-2.svg', '/img/blog-cover-3.svg'];
+
+	// A stable-ish tilt per card (random at render/prerender time, like the photos).
+	const rot = (Math.random() * 8 - 4).toFixed(2);
+
+	$: cover = blog.coverImageUrl || COVERS[index % COVERS.length];
 	$: duration = Duration.fromISO(blog.approxTimeToRead);
 	$: readTime = duration.minutes <= 1 ? 'less than a minute' : `${duration.toFormat('m')} min read`;
 	$: date = DateTime.fromISO(blog.createdAt).toFormat('MMM yyyy');
 </script>
 
-<a class="card" href={`/blog/posts/${blog.id}`}>
-	<div class="card-inner">
-		{#if showCover && (blog.coverImageUrl || fallbackSrc)}
-			<div class="card-img-wrap">
-				<img src={blog.coverImageUrl || fallbackSrc} alt={blog.title} loading="lazy" />
-			</div>
-		{/if}
-		<div class="card-body">
-			<p class="meta">{date} · {readTime}</p>
-			<h3 class="title">{blog.title}</h3>
-			<p class="desc">{blog.description}</p>
+<a class="blog-polaroid" href={`/blog/posts/${blog.id}`} style="--rot: {rot}">
+	<div class="inner">
+		<div class="tile-frame">
+			<img src={cover} alt={blog.title} loading="lazy" decoding="async" />
 		</div>
+		<span class="p-meta">{date} · {readTime}</span>
+		<span class="p-title">{blog.title}</span>
 	</div>
 </a>
 
 <style>
-	.card {
-		text-decoration: none;
+	.blog-polaroid {
 		display: block;
-		transform: translateY(0);
-		transition: transform 0.2s ease-out;
+		text-decoration: none;
+		width: calc(33.33% - 0.75rem);
+		margin: -0.4rem;
+		position: relative;
+		z-index: 1;
+		transform: rotate(calc(var(--rot) * 1deg));
+		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
 	}
 
-	.card:hover { transform: translateY(-4px); }
+	.blog-polaroid:hover {
+		transform: rotate(0deg) scale(1.06);
+		z-index: 20;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s;
+	}
 
-	.card-inner {
-		border: 1px solid var(--border);
-		background: var(--surface-alt);
+	.inner {
+		background: var(--mat);
+		padding: 0.6rem 0.6rem 1.1rem;
+		box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.55);
+		transition: box-shadow 0.2s ease;
 		height: 100%;
+	}
+
+	.blog-polaroid:hover .inner {
+		box-shadow: 10px 10px 28px rgba(0, 0, 0, 0.7);
+	}
+
+	.tile-frame {
 		overflow: hidden;
-		transition: border-color 0.2s ease;
-	}
-
-	.card:hover .card-inner { border-color: var(--accent-dim); }
-
-	.card-body {
-		padding: 1.25rem 1.5rem 1.5rem;
-	}
-
-	.card-img-wrap {
 		width: 100%;
-		aspect-ratio: 16 / 10;
-		overflow: hidden;
+		padding-top: 62.5%; /* 16:10 blog covers */
+		position: relative;
+		background: #d9d3c8;
 	}
 
-	.card-img-wrap img {
+	.tile-frame img {
+		position: absolute;
+		inset: 0;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		filter: saturate(0.9);
-		transition: filter 0.4s ease, transform 0.4s ease;
+		object-position: center;
+		display: block;
+		opacity: 0.94;
+		transition: opacity 0.3s ease, transform 0.3s ease;
 	}
 
-	.card:hover .card-img-wrap img { filter: saturate(1.05); transform: scale(1.03); }
+	.blog-polaroid:hover .tile-frame img { opacity: 1; }
 
-	.meta {
+	.p-meta {
+		display: block;
+		margin-top: 0.6rem;
 		font-family: var(--font-mono);
-		font-size: 0.65rem;
+		font-size: 0.52rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: var(--text-muted);
-		margin-bottom: 0.5rem;
+		color: #8a8072;
 	}
 
-	.title {
-		font-family: var(--font-display);
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--text);
-		line-height: 1.35;
-		margin-bottom: 0.5rem;
-		position: relative;
-		padding-bottom: 0.5rem;
-	}
-
-	.title::after {
-		content: '';
-		position: absolute;
-		bottom: 0; left: 0;
-		width: 0;
-		height: 1px;
-		background: var(--accent);
-		transition: width 0.3s ease;
-	}
-
-	.card:hover .title::after { width: 100%; }
-
-	.desc {
-		font-family: var(--font-ui);
-		font-size: 0.8rem;
-		line-height: 1.7;
-		color: var(--text-muted);
+	.p-title {
 		display: -webkit-box;
-		line-clamp: 3;
-		-webkit-line-clamp: 3;
+		margin-top: 0.25rem;
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		font-weight: 600;
+		line-height: 1.35;
+		color: #2b2721;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+
+	@media (max-width: 768px) {
+		.blog-polaroid {
+			width: calc(70% - 0.5rem);
+			margin: -0.3rem;
+			transform: rotate(calc(var(--rot) * 2deg));
+		}
 	}
 </style>
