@@ -137,21 +137,25 @@
 	/* A written index-card: manila paper, a red margin rule, faint horizontal
 	   ruling behind the text, and a folded dog-ear corner. Sits among the
 	   Polaroids as a hand-written note rather than a placeholder image. */
+	/* One ruling rhythm (`--rule`) drives BOTH the horizontal lines and the
+	   text line-height, so every line of text sits on a ruled line — like
+	   writing on real ruled paper. Padding-top is a whole rule and all vertical
+	   gaps are rule-multiples, so nothing knocks the text off the lines. */
 	.note-inner {
+		--rule: 1.75rem;
 		position: relative;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		padding: 0.95rem 1rem 1.1rem 1.4rem;
+		min-height: calc(var(--rule) * 9);
+		padding: var(--rule) 1rem 0.4rem 1.6rem;
+		line-height: var(--rule);
 		background-color: #f4ecd6;
-		background-image:
-			repeating-linear-gradient(
-				to bottom,
-				transparent 0,
-				transparent 1.55rem,
-				rgba(70, 90, 130, 0.14) 1.55rem,
-				rgba(70, 90, 130, 0.14) calc(1.55rem + 1px)
-			);
+		/* rule sits at the bottom of each line-box */
+		background-image: repeating-linear-gradient(
+			to bottom,
+			transparent 0,
+			transparent calc(var(--rule) - 1px),
+			rgba(70, 90, 130, 0.2) calc(var(--rule) - 1px),
+			rgba(70, 90, 130, 0.2) var(--rule)
+		);
 		border: 1px solid rgba(0, 0, 0, 0.08);
 		box-shadow:
 			0 1px 0 rgba(255, 255, 255, 0.6) inset,
@@ -172,7 +176,7 @@
 		position: absolute;
 		top: 0;
 		bottom: 0;
-		left: 0.95rem;
+		left: 1.1rem;
 		width: 1px;
 		background: rgba(190, 70, 60, 0.5);
 	}
@@ -189,34 +193,34 @@
 		filter: drop-shadow(-1px 1px 1px rgba(0, 0, 0, 0.15));
 	}
 
+	/* Every text element keeps line-height: var(--rule) (inherited) and uses
+	   only rule-multiple margins so it stays locked to the ruling. */
 	.note-meta {
+		display: block;
 		font-family: var(--font-mono);
 		font-size: 0.5rem;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: #a08a5e;
-		margin-bottom: 0.5rem;
 	}
 
 	.note-title {
 		display: -webkit-box;
 		font-family: var(--font-mono);
-		font-size: 0.92rem;
+		font-size: 0.9rem;
 		font-weight: 600;
-		line-height: 1.4;
 		color: #2b2721;
 		-webkit-line-clamp: 3;
 		line-clamp: 3;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-		margin-bottom: 0.5rem;
 	}
 
 	.note-desc {
 		display: -webkit-box;
+		margin-top: var(--rule);
 		font-family: var(--font-mono);
-		font-size: 0.62rem;
-		line-height: 1.55;
+		font-size: 0.68rem;
 		color: #6a5f4a;
 		-webkit-line-clamp: 4;
 		line-clamp: 4;
@@ -225,10 +229,10 @@
 	}
 
 	.note-read {
-		margin-top: auto;
-		padding-top: 0.7rem;
+		display: block;
+		margin-top: var(--rule);
 		font-family: var(--font-mono);
-		font-size: 0.55rem;
+		font-size: 0.58rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: #be463c;
