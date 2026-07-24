@@ -106,8 +106,8 @@
 		</p>
 
 		<div class="blog-dump">
-			{#each (data.blogs ?? []).slice(0, 3) as blog, i (blog.id)}
-				<BlogPost {blog} index={i} />
+			{#each (data.blogs ?? []).slice(0, 3) as blog (blog.id)}
+				<BlogPost {blog} />
 			{:else}
 				<p class="no-posts">blogs API offline. run docker-compose up to load posts.</p>
 			{/each}

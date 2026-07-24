@@ -19,8 +19,8 @@
 		</p>
 
 		<div class="blog-dump">
-			{#each blogs as blog, i (blog.id)}
-				<BlogPost {blog} index={i} />
+			{#each blogs as blog (blog.id)}
+				<BlogPost {blog} />
 			{/each}
 		</div>
 
