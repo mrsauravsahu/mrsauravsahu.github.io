@@ -10,7 +10,16 @@
 	// A stable-ish tilt per card (random at render/prerender time, like the photos).
 	const rot = (Math.random() * 8 - 4).toFixed(2);
 
-	$: cover = blog.coverImageUrl || COVERS[index % COVERS.length];
+	$: fallback = COVERS[index % COVERS.length];
+	$: cover = blog.coverImageUrl || fallback;
+
+	// Some posts point coverImageUrl at a `/store/...` path the static site can't
+	// serve; degrade to the SVG fallback instead of a blank frame.
+	/** @param {Event} e */
+	function onCoverError(e) {
+		const img = /** @type {HTMLImageElement} */ (e.currentTarget);
+		if (!img.src.endsWith(fallback)) img.src = fallback;
+	}
 	$: duration = Duration.fromISO(blog.approxTimeToRead);
 	$: readTime = duration.minutes <= 1 ? 'less than a minute' : `${duration.toFormat('m')} min read`;
 	$: date = DateTime.fromISO(blog.createdAt).toFormat('MMM yyyy');
@@ -19,7 +28,7 @@
 <a class="blog-polaroid" href={`/blog/posts/${blog.id}`} style="--rot: {rot}">
 	<div class="inner">
 		<div class="tile-frame">
-			<img src={cover} alt={blog.title} loading="lazy" decoding="async" />
+			<img src={cover} alt={blog.title} loading="lazy" decoding="async" on:error={onCoverError} />
 		</div>
 		<div class="caption">
 			<span class="p-title">{blog.title}</span>
