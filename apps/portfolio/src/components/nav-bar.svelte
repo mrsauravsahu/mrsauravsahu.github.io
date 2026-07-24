@@ -41,22 +41,23 @@
 	}
 
 	nav.scrolled {
-		background: rgba(13, 13, 13, 0.88);
+		background: rgba(20, 17, 13, 0.85);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
 		border-color: var(--border);
 	}
 
 	.logo {
-		font-family: var(--font-mono);
+		font-family: var(--font-display);
 		font-weight: 700;
-		font-size: 1rem;
-		letter-spacing: 0.05em;
-		color: var(--accent);
+		font-size: 1.2rem;
+		letter-spacing: 0.02em;
+		color: var(--text);
 		text-decoration: none;
 		line-height: 1;
-		text-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
 	}
+
+	.logo:hover { color: var(--accent); }
 
 	ul.links {
 		display: flex;
@@ -65,7 +66,7 @@
 	}
 
 	ul.links a {
-		font-family: var(--font-ui);
+		font-family: var(--font-mono);
 		font-size: 0.7rem;
 		letter-spacing: 0.15em;
 		text-transform: uppercase;
@@ -117,7 +118,7 @@
 			top: 3.5rem; left: 0; right: 0;
 			flex-direction: column;
 			gap: 0;
-			background: rgba(13, 13, 13, 0.97);
+			background: rgba(20, 17, 13, 0.97);
 			backdrop-filter: blur(12px);
 			border-bottom: 1px solid var(--border);
 			padding: 1rem 0 2rem;
