@@ -160,7 +160,7 @@ export function fadeNavigate(node: HTMLAnchorElement, href: string) {
 
 		const veil = document.createElement('div');
 		veil.style.cssText =
-			'position:fixed;inset:0;z-index:300;pointer-events:none;background:var(--bg, #14110d);opacity:0;';
+			'position:fixed;inset:0;z-index:300;pointer-events:none;background:var(--bg, #0a0a0a);opacity:0;';
 		document.body.append(veil);
 
 		const out = veil.animate([{ opacity: 0 }, { opacity: 1 }], {
