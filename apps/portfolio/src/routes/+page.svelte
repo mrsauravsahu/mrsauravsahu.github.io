@@ -24,8 +24,30 @@
 	// Viewport point the print is lifted from — the tile that was clicked.
 	let origin = { x: 0, y: 0 };
 
+	// The full-res file is much heavier than the thumb, so fetching it only on
+	// click means the paper finishes flying before there is anything to show.
+	// Hovering (or touching, or tabbing to) a tile is a strong enough signal of
+	// intent to start the download early — by the time the click lands the file
+	// is usually in cache and the modal opens against a decoded image.
+	const warmed = new Set<string>();
+
+	function preloadPhoto(photo: Photo) {
+		if (warmed.has(photo.full)) return;
+		warmed.add(photo.full);
+		const img = new Image();
+		img.decoding = 'async';
+		// Same dev-mode caveat as the <img> tags: derivatives don't exist until
+		// build, so fall back to the original rather than warming a 404.
+		img.onerror = () => { img.onerror = null; img.src = `/photos/${photo.filename}`; };
+		img.src = photo.full;
+	}
+
+	// Has the full-res arrived for the print that's currently open?
+	let fullReady = false;
+
 	function openPhoto(e: MouseEvent, photo: Photo) {
 		origin = centreOf(e.currentTarget as HTMLElement);
+		fullReady = false;
 		selectedPhoto = photo;
 	}
 
@@ -70,7 +92,7 @@
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => topPhoto = i} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
 							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" on:error={(e) => fallbackToOriginal(e, photo)} />
@@ -143,7 +165,24 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 	<div class="modal-backdrop" transition:fade={{ duration: 260 }} on:click={() => selectedPhoto = null}>
 		<div class="modal-frame" transition:paperOpen={{ from: origin }} on:click|stopPropagation>
-			<img src={selectedPhoto.full} alt={selectedPhoto.caption} class="modal-img" decoding="async" on:error={(e) => fallbackToOriginal(e, selectedPhoto)} />
+			<!-- The thumb is already decoded (it's the tile you just clicked), so it
+			     fills the frame instantly and sets the height. The full-res fades in
+			     on top once it's ready — if it's warm from hover that's the same
+			     frame and you never see the swap. -->
+			{#key selectedPhoto.full}
+				<div class="modal-plate">
+					<img src={selectedPhoto.thumb} alt="" class="modal-thumb" aria-hidden="true" decoding="async" />
+					<img
+						src={selectedPhoto.full}
+						alt={selectedPhoto.caption}
+						class="modal-img"
+						decoding="async"
+						class:ready={fullReady}
+					on:load={() => (fullReady = true)}
+						on:error={(e) => fallbackToOriginal(e, selectedPhoto)}
+					/>
+				</div>
+			{/key}
 			{#if selectedPhoto.caption}
 				<p class="modal-caption">{selectedPhoto.caption}</p>
 			{/if}
@@ -400,12 +439,39 @@
 		cursor: default;
 	}
 
-	.modal-img {
+	/* The thumb sets the plate's size; the full-res sits exactly on top of it. */
+	.modal-plate {
+		position: relative;
+		line-height: 0;
+	}
+
+	.modal-thumb {
 		display: block;
 		width: 100%;
 		height: auto;
 		max-height: 70vh;
 		object-fit: contain;
+		/* It's a tile-sized file blown up to plate size — a touch of blur reads as
+		   a print still developing rather than as a low-quality image. */
+		filter: blur(6px) saturate(0.92);
+		transform: scale(1.02); /* hides the blur bleeding past the edges */
+	}
+
+	.modal-img {
+		position: absolute;
+		inset: 0;
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		opacity: 0;
+		transition: opacity 0.28s ease;
+	}
+
+	.modal-img.ready { opacity: 1; }
+
+	@media (prefers-reduced-motion: reduce) {
+		.modal-img { transition: none; }
 	}
 
 	.modal-caption {

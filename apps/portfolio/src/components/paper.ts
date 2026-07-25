@@ -13,7 +13,7 @@
  *                    finish its flight before the router swaps the page.
  */
 import { cubicOut } from 'svelte/easing';
-import { goto } from '$app/navigation';
+import { goto, preloadData } from '$app/navigation';
 
 const PERSPECTIVE = 1100;
 
@@ -80,6 +80,18 @@ function isPlainClick(e: MouseEvent): boolean {
 export function paperFlight(node: HTMLAnchorElement, href: string) {
 	let current = href;
 	let flying = false;
+	let warmed = false;
+
+	// Fetch the post's data and code while the pointer is still on the card, so
+	// the `goto` at the end of the flight is a swap rather than a load. Without
+	// this the paper lands and then the reader waits.
+	function warm() {
+		if (warmed) return;
+		warmed = true;
+		preloadData(current).catch(() => {
+			warmed = false; // transient failure — worth retrying on the next hover
+		});
+	}
 
 	async function onClick(e: MouseEvent) {
 		if (!isPlainClick(e) || flying) return;
@@ -157,13 +169,20 @@ export function paperFlight(node: HTMLAnchorElement, href: string) {
 	}
 
 	node.addEventListener('click', onClick);
+	node.addEventListener('mouseenter', warm);
+	node.addEventListener('focus', warm);
+	node.addEventListener('touchstart', warm, { passive: true });
 
 	return {
 		update(next: string) {
+			if (next !== current) warmed = false;
 			current = next;
 		},
 		destroy() {
 			node.removeEventListener('click', onClick);
+			node.removeEventListener('mouseenter', warm);
+			node.removeEventListener('focus', warm);
+			node.removeEventListener('touchstart', warm);
 		}
 	};
 }
