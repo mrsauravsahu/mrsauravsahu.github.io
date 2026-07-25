@@ -1,6 +1,9 @@
 <script>
 	import { DateTime, Duration } from 'luxon';
+	import { paperFlight } from './paper';
 	export let blog;
+
+	$: href = `/blog/posts/${blog.id}`;
 
 	// A stable-ish tilt per card (random at render/prerender time, like the photos).
 	const rot = (Math.random() * 8 - 4).toFixed(2);
@@ -17,7 +20,7 @@
 	$: date = DateTime.fromISO(blog.createdAt).toFormat('MMM yyyy');
 </script>
 
-<a class="card" class:note={showNote} href={`/blog/posts/${blog.id}`} style="--rot: {rot}">
+<a class="card" class:note={showNote} {href} use:paperFlight={href} style="--rot: {rot}">
 	{#if showNote}
 		<div class="note-inner">
 			<span class="note-meta">{date} · {readTime}</span>

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { cubicOut } from 'svelte/easing';
+	import { fade } from 'svelte/transition';
+	import { paperOpen, centreOf } from '../components/paper';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -20,23 +21,11 @@
 		if (!img.src.endsWith(original)) img.src = original;
 	}
 	let topPhoto: number | null = null;
-	let origin = { x: '50%', y: '50%' };
-
-	function zoomFromPhoto(node: Element, { duration = 320 }: { duration?: number } = {}) {
-		const ox = origin.x, oy = origin.y;
-		return {
-			duration,
-			easing: cubicOut,
-			css: (t: number) => `transform: scale(${t}); transform-origin: ${ox} ${oy}; opacity: ${t};`
-		};
-	}
+	// Viewport point the print is lifted from — the tile that was clicked.
+	let origin = { x: 0, y: 0 };
 
 	function openPhoto(e: MouseEvent, photo: Photo) {
-		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-		origin = {
-			x: `${rect.left + rect.width / 2}px`,
-			y: `${rect.top + rect.height / 2}px`,
-		};
+		origin = centreOf(e.currentTarget as HTMLElement);
 		selectedPhoto = photo;
 	}
 
@@ -152,8 +141,8 @@
 <!-- ── Photo modal ───────────────────────────────────────── -->
 {#if selectedPhoto}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-	<div class="modal-backdrop" transition:zoomFromPhoto={{ duration: 320 }} on:click={() => selectedPhoto = null}>
-		<div class="modal-frame" on:click|stopPropagation>
+	<div class="modal-backdrop" transition:fade={{ duration: 260 }} on:click={() => selectedPhoto = null}>
+		<div class="modal-frame" transition:paperOpen={{ from: origin }} on:click|stopPropagation>
 			<img src={selectedPhoto.full} alt={selectedPhoto.caption} class="modal-img" decoding="async" on:error={(e) => fallbackToOriginal(e, selectedPhoto)} />
 			{#if selectedPhoto.caption}
 				<p class="modal-caption">{selectedPhoto.caption}</p>

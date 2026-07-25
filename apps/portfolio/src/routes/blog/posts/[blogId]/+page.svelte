@@ -15,7 +15,9 @@
 	<title>{blog?.title} — @mrsauravsahu</title>
 </svelte:head>
 
-<article class="post-page">
+<!-- `settle` finishes the flight the card started: the sheet arrives still
+     tipped slightly back and flattens out under the reader. -->
+<article class="post-page settle">
 	<div class="post-inner">
 		<a href="/blog/1" class="back-link">← all posts</a>
 
@@ -40,6 +42,26 @@
 </article>
 
 <style>
+	.settle {
+		transform-origin: 50% 0;
+		animation: settle 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+	}
+
+	@keyframes settle {
+		from {
+			opacity: 0;
+			transform: perspective(1100px) rotateX(-7deg) scale(1.04);
+		}
+		to {
+			opacity: 1;
+			transform: perspective(1100px) rotateX(0deg) scale(1);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.settle { animation: none; }
+	}
+
 	.post-page {
 		background: var(--surface);
 		min-height: 100vh;
