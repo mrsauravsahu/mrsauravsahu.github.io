@@ -29,7 +29,7 @@
 		--surface-alt: #221d17;
 		--mat:         #ede9e2;
 		--border:      #2c2620;
-		--text:        #000000;
+		--text:        #f2ede4;
 		--text-muted:  #a2988a;
 		--accent:      #d9a441;
 		--accent-dim:  #8a6a2e;
@@ -53,7 +53,10 @@
 		background: var(--bg);
 		color: var(--text);
 		font-family: var(--font-ui);
-		font-size: 16px;
+		/* Everything else on the site sizes in rem, so this one value scales the
+		   whole thing. A percentage rather than a fixed px so it stays relative
+		   to whatever the reader has set as their browser default. */
+		font-size: 80%;
 		overflow-x: hidden;
 	}
 

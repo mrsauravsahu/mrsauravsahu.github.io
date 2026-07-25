@@ -514,6 +514,18 @@
 		.modal-img { transition: none; }
 	}
 
+	/* The zoomed print is the one place the reader is looking at paper rather
+	   than at the dark table, so its caption is black on the mat instead of the
+	   warm grey used on the tiles. */
+	.modal-caption {
+		text-align: center;
+		margin-top: 0.75rem;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		letter-spacing: 0.08em;
+		color: #000000;
+	}
+
 	/* ── Contact ──────────────────────────────────────── */
 	.contact {
 		background: var(--surface);
