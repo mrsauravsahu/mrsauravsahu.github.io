@@ -1,9 +1,13 @@
 <script>
 	import { DateTime, Duration } from 'luxon';
-	import { paperFlight } from './paper';
+	import { fadeNavigate } from './paper';
 	export let blog;
 
 	$: href = `/blog/posts/${blog.id}`;
+
+	// A card with a cover waits for that cover before it appears, like the photo
+	// tiles do. Note cards have no image to wait on, so they show immediately.
+	let coverLoaded = false;
 
 	// A stable-ish tilt per card (random at render/prerender time, like the photos).
 	const rot = (Math.random() * 8 - 4).toFixed(2);
@@ -20,7 +24,14 @@
 	$: date = DateTime.fromISO(blog.createdAt).toFormat('MMM yyyy');
 </script>
 
-<a class="card" class:note={showNote} {href} use:paperFlight={href} style="--rot: {rot}">
+<a
+	class="card"
+	class:note={showNote}
+	class:shown={showNote || coverLoaded}
+	{href}
+	use:fadeNavigate={href}
+	style="--rot: {rot}"
+>
 	{#if showNote}
 		<div class="note-inner">
 			<span class="note-meta">{date} · {readTime}</span>
@@ -33,7 +44,7 @@
 	{:else}
 		<div class="inner">
 			<div class="tile-frame">
-				<img src={blog.coverImageUrl} alt={blog.title} loading="lazy" decoding="async" on:error={() => (imgFailed = true)} />
+				<img src={blog.coverImageUrl} alt={blog.title} loading="lazy" decoding="async" on:load={() => (coverLoaded = true)} on:error={() => (imgFailed = true)} />
 			</div>
 			<div class="caption">
 				<span class="p-title">{blog.title}</span>
@@ -52,8 +63,12 @@
 		position: relative;
 		z-index: 1;
 		transform: rotate(calc(var(--rot) * 1deg));
-		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
+		opacity: 0;
+		transition: opacity 0.45s ease, transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
 	}
+
+	/* Held back until the cover has downloaded — see `coverLoaded`. */
+	.card.shown { opacity: 1; }
 
 	.card:hover {
 		transform: rotate(0deg) scale(1.06);

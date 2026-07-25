@@ -6,11 +6,13 @@
  * off the table and bringing it right up to your face — it hinges up from
  * where it was lying, unfolds flat, and flies at the screen.
  *
- * Two entry points, because the two cases are structurally different:
- *   - `paperOpen`  — a Svelte transition, for content that opens in place
- *                    (the photo modal).
- *   - `paperFlight`— a Svelte action, for content that is a link and has to
- *                    finish its flight before the router swaps the page.
+ * Only photos get that treatment, though — they're the thing you came to look
+ * at. Posts you came to *read*, so they get a quiet cross-fade instead.
+ *
+ *   - `paperOpen`    — a Svelte transition, for content that opens in place
+ *                      (the photo modal).
+ *   - `fadeNavigate` — a Svelte action, for links that should dim out and hand
+ *                      over to the destination page.
  */
 import { cubicOut } from 'svelte/easing';
 import { goto, preloadData } from '$app/navigation';
@@ -72,19 +74,19 @@ function isPlainClick(e: MouseEvent): boolean {
 }
 
 /**
- * Svelte action for a link that behaves like a sheet of paper: on click the
- * card lifts off the page, unfolds flat, and flies into the screen; only once
- * it has filled the viewport do we navigate. A clone does the flying so the
- * real card (and the grid around it) is never disturbed.
+ * Svelte action for a link that should cross-fade to its destination: the
+ * current page dims out, the router swaps, and the new page comes up. Used for
+ * blog posts, where the reader is going somewhere to *read* — a quiet handoff
+ * suits that better than throwing the page at them.
  */
-export function paperFlight(node: HTMLAnchorElement, href: string) {
+export function fadeNavigate(node: HTMLAnchorElement, href: string) {
 	let current = href;
-	let flying = false;
+	let leaving = false;
 	let warmed = false;
 
 	// Fetch the post's data and code while the pointer is still on the card, so
-	// the `goto` at the end of the flight is a swap rather than a load. Without
-	// this the paper lands and then the reader waits.
+	// the `goto` is a swap rather than a load and the fade isn't holding on an
+	// empty screen.
 	function warm() {
 		if (warmed) return;
 		warmed = true;
@@ -94,76 +96,38 @@ export function paperFlight(node: HTMLAnchorElement, href: string) {
 	}
 
 	async function onClick(e: MouseEvent) {
-		if (!isPlainClick(e) || flying) return;
+		if (!isPlainClick(e) || leaving) return;
 		if (prefersReducedMotion()) return; // let the browser navigate normally
 
 		e.preventDefault();
-		flying = true;
+		leaving = true;
 
-		const rect = node.getBoundingClientRect();
-		const dx = window.innerWidth / 2 - (rect.left + rect.width / 2);
-		const dy = window.innerHeight / 2 - (rect.top + rect.height / 2);
-		// Grow until the sheet is comfortably past both viewport edges, so the
-		// page swap happens behind solid paper rather than mid-air.
-		const cover = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.25;
-
-		const backdrop = document.createElement('div');
-		backdrop.style.cssText =
+		const veil = document.createElement('div');
+		veil.style.cssText =
 			'position:fixed;inset:0;z-index:300;pointer-events:none;background:var(--bg, #14110d);opacity:0;';
+		document.body.append(veil);
 
-		const clone = node.cloneNode(true) as HTMLElement;
-		clone.removeAttribute('href');
-		clone.style.cssText =
-			`position:fixed;left:${rect.left}px;top:${rect.top}px;` +
-			`width:${rect.width}px;height:${rect.height}px;margin:0;z-index:301;` +
-			`pointer-events:none;transform-origin:50% 100%;will-change:transform,opacity;`;
-
-		document.body.append(backdrop, clone);
-
-		const easing = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
-		const duration = 520;
-
-		const flight = clone.animate(
-			[
-				{
-					transform: `perspective(${PERSPECTIVE}px) translate(0px, 0px) rotateX(0deg) scale(1)`,
-					offset: 0
-				},
-				{
-					// picked up off the table — tips back and lifts before it commits
-					transform: `perspective(${PERSPECTIVE}px) translate(${dx * 0.35}px, ${dy * 0.35 - 14}px) rotateX(-16deg) scale(1.18)`,
-					offset: 0.38
-				},
-				{
-					transform: `perspective(${PERSPECTIVE}px) translate(${dx}px, ${dy}px) rotateX(0deg) scale(${cover})`,
-					opacity: 0.35,
-					offset: 1
-				}
-			],
-			{ duration, easing, fill: 'forwards' }
-		);
-		backdrop.animate([{ opacity: 0 }, { opacity: 1 }], {
-			duration,
-			easing: 'cubic-bezier(0.4, 0, 1, 1)',
+		const out = veil.animate([{ opacity: 0 }, { opacity: 1 }], {
+			duration: 220,
+			easing: 'ease-out',
 			fill: 'forwards'
 		});
 
 		try {
-			await flight.finished;
+			await out.finished;
 		} catch {
 			/* animation cancelled — navigate anyway */
 		}
 
 		await goto(current);
-		// One frame on the new page before we lift the paper away, so the reader
-		// never sees a flash of the old page underneath.
+		// One frame on the new page before lifting the veil, so the reader never
+		// catches a flash of the old page underneath.
 		requestAnimationFrame(() => {
-			backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' }).finished
-				.catch(() => {})
+			veil.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-in', fill: 'forwards' })
+				.finished.catch(() => {})
 				.finally(() => {
-					backdrop.remove();
-					clone.remove();
-					flying = false;
+					veil.remove();
+					leaving = false;
 				});
 		});
 	}

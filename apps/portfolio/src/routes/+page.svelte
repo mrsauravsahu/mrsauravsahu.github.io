@@ -45,6 +45,17 @@
 	// Has the full-res arrived for the print that's currently open?
 	let fullReady = false;
 
+	// A print only appears once its thumbnail has actually downloaded — the grid
+	// is a scattered pile, and half-drawn tiles popping in one by one reads as
+	// broken rather than as a stack of photos on a table. The tile keeps its
+	// space in the layout while it waits, so nothing reflows underneath.
+	let tileLoaded: Record<string, boolean> = {};
+
+	function markTileLoaded(photo: Photo) {
+		tileLoaded[photo.filename] = true;
+		tileLoaded = tileLoaded;
+	}
+
 	function openPhoto(e: MouseEvent, photo: Photo) {
 		origin = centreOf(e.currentTarget as HTMLElement);
 		fullReady = false;
@@ -92,10 +103,10 @@
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
-							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" on:error={(e) => fallbackToOriginal(e, photo)} />
+							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" on:load={() => markTileLoaded(photo)} on:error={(e) => fallbackToOriginal(e, photo)} />
 						</div>
 						<span class="tile-label">{photo.caption}</span>
 					</div>
@@ -166,19 +177,29 @@
 	<div class="modal-backdrop" transition:fade={{ duration: 260 }} on:click={() => selectedPhoto = null}>
 		<div class="modal-frame" transition:paperOpen={{ from: origin }} on:click|stopPropagation>
 			<!-- The thumb is already decoded (it's the tile you just clicked), so it
-			     fills the frame instantly and sets the height. The full-res fades in
-			     on top once it's ready — if it's warm from hover that's the same
-			     frame and you never see the swap. -->
+			     paints instantly and gives the plate its height. The full-res fades
+			     in on top once ready — warm from hover, that swap is invisible.
+			     Both need the on:error fallback: in `npm run dev` the optimizer
+			     hasn't run, so *both* derivative paths 404 and only the original
+			     exists. Without it on the thumb the plate collapses to zero height
+			     and takes the absolutely-positioned full-res down with it. -->
 			{#key selectedPhoto.full}
 				<div class="modal-plate">
-					<img src={selectedPhoto.thumb} alt="" class="modal-thumb" aria-hidden="true" decoding="async" />
+					<img
+						src={selectedPhoto.thumb}
+						alt=""
+						class="modal-thumb"
+						aria-hidden="true"
+						decoding="async"
+						on:error={(e) => fallbackToOriginal(e, selectedPhoto)}
+					/>
 					<img
 						src={selectedPhoto.full}
 						alt={selectedPhoto.caption}
 						class="modal-img"
-						decoding="async"
 						class:ready={fullReady}
-					on:load={() => (fullReady = true)}
+						decoding="async"
+						on:load={() => (fullReady = true)}
 						on:error={(e) => fallbackToOriginal(e, selectedPhoto)}
 					/>
 				</div>
@@ -354,6 +375,14 @@
 
 	.dump-item { transform: rotate(calc(var(--rot) * 1deg)); }
 
+	/* Held back until the thumbnail is decoded — see `tileLoaded`. */
+	.dump-item {
+		opacity: 0;
+		transition: opacity 0.45s ease, transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
+	}
+
+	.dump-item.loaded { opacity: 1; }
+
 	.dump-item:hover {
 		transform: rotate(0deg) scale(1.12) !important;
 		z-index: 20;
@@ -443,6 +472,9 @@
 	.modal-plate {
 		position: relative;
 		line-height: 0;
+		/* Safety net: if even the original fails, the frame still has a body
+		   rather than collapsing into the caption. */
+		min-height: 8rem;
 	}
 
 	.modal-thumb {
