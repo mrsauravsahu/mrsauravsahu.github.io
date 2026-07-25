@@ -30,19 +30,28 @@ No `$` prompts, no command lines, no traffic-light window chrome anywhere on the
 
 ### Color Palette
 
-A warm "gallery dark" — rich enough to make prints glow, warm enough to never feel like a code editor.
+A near-black "gallery dark" — the room lights are off, so the prints and the
+amber are the only things with colour in them.
 
 ```
---bg:          #14110d   /* warm near-black — a dark gallery wall */
---surface:     #1b1712   /* alternating sections, cards */
---surface-alt: #221d17   /* subtle differentiation */
+--bg:          #0a0a0a   /* near-black — an unlit gallery wall */
+--surface:     #111111   /* alternating sections, cards */
+--surface-alt: #181817   /* subtle differentiation */
 --mat:         #ede9e2   /* Polaroid / print mat — the cream that frames every photo */
---border:      #2c2620   /* warm hairlines — brown-grey, not green */
---text:        #f2ede4   /* warm off-white — the primary reading colour */
---text-muted:  #a2988a   /* captions, metadata, secondary labels */
+--border:      #272725   /* neutral hairlines, a hair off pure grey */
+--text:        #f4f2ee   /* off-white, barely warm — the primary reading colour */
+--text-muted:  #9b968d   /* captions, metadata, secondary labels */
 --accent:      #d9a441   /* amber / safelight — film warmth, used sparingly */
 --accent-dim:  #8a6a2e   /* accent at lower intensity — borders, hovers */
 ```
+
+> Why near-black, not brown? The earlier neutrals carried a real brown cast
+> (`#14110d` is a saturated warm hue, not a dark grey), which read as *tinted*
+> rather than as dark. Pulling the base to near-neutral black does two things:
+> the cream mats and amber now supply all the warmth on the page instead of
+> competing with a brown ground, and the photographs gain contrast because
+> nothing behind them is pushing a colour of its own. The steps stay a degree
+> off pure grey so the palette never turns cold.
 
 > Why amber, not green? Green read as "terminal." Amber reads as darkroom safelight and the warm cast of golden-hour film. It's the colour of the work itself, and it lets the cream Polaroid mats sit naturally against the background instead of fighting a cold green.
 

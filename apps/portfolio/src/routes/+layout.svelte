@@ -24,13 +24,13 @@
 <style>
 	/* ── Tokens ───────────────────────────────────────── */
 	:root {
-		--bg:          #14110d;
-		--surface:     #1b1712;
-		--surface-alt: #221d17;
+		--bg:          #0a0a0a;
+		--surface:     #111111;
+		--surface-alt: #181817;
 		--mat:         #ede9e2;
-		--border:      #2c2620;
-		--text:        #f2ede4;
-		--text-muted:  #a2988a;
+		--border:      #272725;
+		--text:        #f4f2ee;
+		--text-muted:  #9b968d;
 		--accent:      #d9a441;
 		--accent-dim:  #8a6a2e;
 
