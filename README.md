@@ -26,23 +26,29 @@ npm run deploy            # runs export (build) then pushes build/ to gh-pages
 
 #### the deploy domain comes from the CNAME file
 
-**Always deploy to the domain already in the `CNAME` file on the `gh-pages`
-branch. Never hardcode a different one.** There is no `CNAME` tracked in this
-repo — it exists only on `gh-pages`, and because `deploy` force-pushes, whatever
-`build/CNAME` says silently replaces the live custom domain. Point it at a
-domain GitHub Pages isn't serving and the site goes down.
+**The custom domain is `apps/portfolio/static/CNAME` (tracked). Deploy scripts
+must never write `build/CNAME` — change the domain by editing that one file.**
 
-Check the current value before any manual deploy:
+`adapter-static` copies `static/CNAME` into `build/`, so the domain travels with
+the build. This matters because `gh-pages` force-pushes with `--remove`: it
+deletes anything on `gh-pages` that is missing from `build/`. So a hardcoded
+`build/CNAME` silently repoints the live domain, and a *missing* one deletes it
+outright — either way GitHub Pages stops serving the site.
+
+`deploy.sh` therefore hard-fails if `build/CNAME` is absent or empty rather than
+publishing a build that would drop the domain, and echoes the target domain
+before pushing.
+
+To verify what is actually live:
 
 ```bash
 git fetch origin gh-pages
 git show origin/gh-pages:CNAME    # mrsauravsahu.in
 ```
 
-`npm run export` writes the correct value, so `npm run deploy` is the safe path.
-Beware `apps/portfolio/deploy.sh`, which duplicates the export/deploy pipeline
-but hardcodes a **stale** `next.mrsauravsahu.tech` — running it repoints the
-domain and takes the site down. Prefer the npm scripts.
+Note `npm run export` still writes `build/CNAME` itself with the same value —
+redundant now that `static/CNAME` is tracked, but harmless as long as the two
+agree. Keep them in sync if you change the domain.
 
 **The build fetches blog data at build time** (baked into static HTML), so a
 reachable blogs GraphQL API is required or the build hard-fails (empty blog
