@@ -1,11 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="SS">
 	<title>SS</title>
-	<!-- Geometric redraw of the nav "SS" wordmark as strokes, so it renders
-	     without the Geist Mono webfont (favicons get no page fonts). -->
+	<!-- The nav "SS" wordmark in Geist Mono Bold, with the glyphs converted to
+	     outlines: favicons are rendered without the page's webfonts, so a <text>
+	     element would silently fall back to Courier New. Outlines keep the real
+	     typeface. Glyph is Geist Mono Bold "S" (1000 upem, 600 advance); the
+	     group flips the font's y-up coordinates and scales the pair to fit. -->
 	<rect width="64" height="64" rx="14" fill="#14110d" />
 	<rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#2c2620" stroke-width="1.5" />
-	<g fill="none" stroke-width="4.5" stroke-linecap="round">
-		<path stroke="#f2ede4" d="M28 22C28 17 12 17 12 25C12 32 28 32 28 39C28 47 12 47 12 42" />
-		<path stroke="#d9a441" d="M50 22C50 17 34 17 34 25C34 32 50 32 50 39C50 47 34 47 34 42" />
+	<g transform="translate(10.04 44.99) scale(0.0366 -0.0366)">
+		<path fill="#f2ede4" d="M306 -16C463 -16 558 66 558 193C558 305 505 374 343 414C232 443 200 466 200 518C200 568 236 600 294 600C359 600 396 555 406 481L550 488C539 639 451 726 300 726C144 726 56 641 56 511C56 393 122 342 264 306C382 276 414 242 414 188C414 138 377 110 313 110C242 110 198 155 185 247L42 240C53 81 144 -16 306 -16Z" />
+		<path fill="#d9a441" transform="translate(600 0)" d="M306 -16C463 -16 558 66 558 193C558 305 505 374 343 414C232 443 200 466 200 518C200 568 236 600 294 600C359 600 396 555 406 481L550 488C539 639 451 726 300 726C144 726 56 641 56 511C56 393 122 342 264 306C382 276 414 242 414 188C414 138 377 110 313 110C242 110 198 155 185 247L42 240C53 81 144 -16 306 -16Z" />
 	</g>
 </svg>
