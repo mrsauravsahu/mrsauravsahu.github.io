@@ -15,7 +15,9 @@
 	<title>{blog?.title} — @mrsauravsahu</title>
 </svelte:head>
 
-<article class="post-page">
+<!-- `settle` is the second half of the card's cross-fade — the veil lifts and
+     the post comes up under it. -->
+<article class="post-page settle">
 	<div class="post-inner">
 		<a href="/blog/1" class="back-link">← all posts</a>
 
@@ -40,6 +42,19 @@
 </article>
 
 <style>
+	.settle {
+		animation: settle 0.34s ease-out both;
+	}
+
+	@keyframes settle {
+		from { opacity: 0; }
+		to   { opacity: 1; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.settle { animation: none; }
+	}
+
 	.post-page {
 		background: var(--surface);
 		min-height: 100vh;

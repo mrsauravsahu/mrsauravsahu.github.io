@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { cubicOut } from 'svelte/easing';
+	import { fade } from 'svelte/transition';
+	import { zoomOpen, rectOf, imageState, type Origin } from '../components/paper';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -13,30 +14,51 @@
 
 	// Optimized derivatives are generated at build time only. In `npm run dev`
 	// they don't exist, so fall back to the original once.
-	function fallbackToOriginal(e: Event, photo: Photo | null) {
+	function fallbackToOriginal(img: HTMLImageElement, photo: Photo | null) {
 		if (!photo) return;
-		const img = e.currentTarget as HTMLImageElement;
 		const original = `/photos/${photo.filename}`;
 		if (!img.src.endsWith(original)) img.src = original;
 	}
 	let topPhoto: number | null = null;
-	let origin = { x: '50%', y: '50%' };
+	// The tile the print zooms out of — its rect gives the zoom both its
+	// starting position and its starting size.
+	let origin: Origin | null = null;
 
-	function zoomFromPhoto(node: Element, { duration = 320 }: { duration?: number } = {}) {
-		const ox = origin.x, oy = origin.y;
-		return {
-			duration,
-			easing: cubicOut,
-			css: (t: number) => `transform: scale(${t}); transform-origin: ${ox} ${oy}; opacity: ${t};`
-		};
+	// The full-res file is much heavier than the thumb, so fetching it only on
+	// click means the paper finishes flying before there is anything to show.
+	// Hovering (or touching, or tabbing to) a tile is a strong enough signal of
+	// intent to start the download early — by the time the click lands the file
+	// is usually in cache and the modal opens against a decoded image.
+	const warmed = new Set<string>();
+
+	function preloadPhoto(photo: Photo) {
+		if (warmed.has(photo.full)) return;
+		warmed.add(photo.full);
+		const img = new Image();
+		img.decoding = 'async';
+		// Same dev-mode caveat as the <img> tags: derivatives don't exist until
+		// build, so fall back to the original rather than warming a 404.
+		img.onerror = () => { img.onerror = null; img.src = `/photos/${photo.filename}`; };
+		img.src = photo.full;
+	}
+
+	// Has the full-res arrived for the print that's currently open?
+	let fullReady = false;
+
+	// A print only appears once its thumbnail has actually downloaded — the grid
+	// is a scattered pile, and half-drawn tiles popping in one by one reads as
+	// broken rather than as a stack of photos on a table. The tile keeps its
+	// space in the layout while it waits, so nothing reflows underneath.
+	let tileLoaded: Record<string, boolean> = {};
+
+	function markTileLoaded(photo: Photo) {
+		tileLoaded[photo.filename] = true;
+		tileLoaded = tileLoaded;
 	}
 
 	function openPhoto(e: MouseEvent, photo: Photo) {
-		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-		origin = {
-			x: `${rect.left + rect.width / 2}px`,
-			y: `${rect.top + rect.height / 2}px`,
-		};
+		origin = rectOf(e.currentTarget as HTMLElement);
+		fullReady = false;
 		selectedPhoto = photo;
 	}
 
@@ -81,10 +103,10 @@
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => topPhoto = i} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
-							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" on:error={(e) => fallbackToOriginal(e, photo)} />
+							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" use:imageState={{ ready: () => markTileLoaded(photo), failed: (img) => fallbackToOriginal(img, photo) }} />
 						</div>
 						<span class="tile-label">{photo.caption}</span>
 					</div>
@@ -152,9 +174,38 @@
 <!-- ── Photo modal ───────────────────────────────────────── -->
 {#if selectedPhoto}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-	<div class="modal-backdrop" transition:zoomFromPhoto={{ duration: 320 }} on:click={() => selectedPhoto = null}>
-		<div class="modal-frame" on:click|stopPropagation>
-			<img src={selectedPhoto.full} alt={selectedPhoto.caption} class="modal-img" decoding="async" on:error={(e) => fallbackToOriginal(e, selectedPhoto)} />
+	<div class="modal-backdrop" transition:fade={{ duration: 260 }} on:click={() => selectedPhoto = null}>
+		<div class="modal-frame" transition:zoomOpen={{ from: origin }} on:click|stopPropagation>
+			<!-- The thumb is already decoded (it's the tile you just clicked), so it
+			     paints instantly and gives the plate its height. The full-res fades
+			     in on top once ready — warm from hover, that swap is invisible.
+			     Both need the failure fallback: in `npm run dev` the optimizer
+			     hasn't run, so *both* derivative paths 404 and only the original
+			     exists. Without it on the thumb the plate collapses to zero height
+			     and takes the absolutely-positioned full-res down with it. -->
+			{#key selectedPhoto.full}
+				<div class="modal-plate">
+					<img
+						src={selectedPhoto.thumb}
+						alt=""
+						class="modal-thumb"
+						aria-hidden="true"
+						decoding="async"
+						use:imageState={{ failed: (img) => fallbackToOriginal(img, selectedPhoto) }}
+					/>
+					<img
+						src={selectedPhoto.full}
+						alt={selectedPhoto.caption}
+						class="modal-img"
+						class:ready={fullReady}
+						decoding="async"
+						use:imageState={{
+							ready: () => (fullReady = true),
+							failed: (img) => fallbackToOriginal(img, selectedPhoto)
+						}}
+					/>
+				</div>
+			{/key}
 			{#if selectedPhoto.caption}
 				<p class="modal-caption">{selectedPhoto.caption}</p>
 			{/if}
@@ -326,6 +377,14 @@
 
 	.dump-item { transform: rotate(calc(var(--rot) * 1deg)); }
 
+	/* Held back until the thumbnail is decoded — see `tileLoaded`. */
+	.dump-item {
+		opacity: 0;
+		transition: opacity 0.45s ease, transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
+	}
+
+	.dump-item.loaded { opacity: 1; }
+
 	.dump-item:hover {
 		transform: rotate(0deg) scale(1.12) !important;
 		z-index: 20;
@@ -406,26 +465,53 @@
 		background: var(--mat);
 		padding: 0.75rem 0.75rem 2.5rem;
 		box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-		max-width: min(90vw, 800px);
+		/* The last term keeps the 4:3 plate inside the viewport height, so the
+		   print never has to be squeezed out of its aspect ratio to fit. */
+		max-width: min(90vw, 800px, calc(62vh * 4 / 3));
 		width: 100%;
 		cursor: default;
 	}
 
-	.modal-img {
-		display: block;
+	/* Same 4:3 window as the tiles in the grid (`.tile-frame`, padding-top 75%)
+	   and the same `cover` crop, so opening a print is a straight scale-up of
+	   what you clicked — the framing never shifts on the way to the screen.
+	   Fixing the ratio also means the plate has its full size before either
+	   image has loaded, so nothing reflows as they arrive. */
+	.modal-plate {
+		position: relative;
+		aspect-ratio: 4 / 3;
 		width: 100%;
-		height: auto;
-		max-height: 70vh;
-		object-fit: contain;
+		overflow: hidden;
+		background: #cfc9bd;
+		line-height: 0;
 	}
 
-	.modal-caption {
-		text-align: center;
-		margin-top: 0.75rem;
-		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		letter-spacing: 0.08em;
-		color: #6b6257;
+	.modal-plate img {
+		position: absolute;
+		inset: 0;
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+	}
+
+	.modal-thumb {
+		/* A tile-sized file blown up to plate size — a touch of blur reads as a
+		   print still developing rather than as a low-quality image. */
+		filter: blur(6px) saturate(0.92);
+		transform: scale(1.03); /* hides the blur bleeding past the edges */
+	}
+
+	.modal-img {
+		opacity: 0;
+		transition: opacity 0.28s ease;
+	}
+
+	.modal-img.ready { opacity: 1; }
+
+	@media (prefers-reduced-motion: reduce) {
+		.modal-img { transition: none; }
 	}
 
 	/* ── Contact ──────────────────────────────────────── */
