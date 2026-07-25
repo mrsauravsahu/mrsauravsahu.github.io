@@ -24,6 +24,32 @@ npm run deploy            # runs export (build) then pushes build/ to gh-pages
 # export writes CNAME (mrsauravsahu.in) + .nojekyll; deploy force-pushes to the gh-pages branch
 ```
 
+#### the deploy domain comes from the CNAME file
+
+**The custom domain is `apps/portfolio/static/CNAME` (tracked). Deploy scripts
+must never write `build/CNAME` — change the domain by editing that one file.**
+
+`adapter-static` copies `static/CNAME` into `build/`, so the domain travels with
+the build. This matters because `gh-pages` force-pushes with `--remove`: it
+deletes anything on `gh-pages` that is missing from `build/`. So a hardcoded
+`build/CNAME` silently repoints the live domain, and a *missing* one deletes it
+outright — either way GitHub Pages stops serving the site.
+
+`deploy.sh` therefore hard-fails if `build/CNAME` is absent or empty rather than
+publishing a build that would drop the domain, and echoes the target domain
+before pushing.
+
+To verify what is actually live:
+
+```bash
+git fetch origin gh-pages
+git show origin/gh-pages:CNAME    # mrsauravsahu.in
+```
+
+Note `npm run export` still writes `build/CNAME` itself with the same value —
+redundant now that `static/CNAME` is tracked, but harmless as long as the two
+agree. Keep them in sync if you change the domain.
+
 **The build fetches blog data at build time** (baked into static HTML), so a
 reachable blogs GraphQL API is required or the build hard-fails (empty blog
 list → prerender crawl error; see [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 4).
