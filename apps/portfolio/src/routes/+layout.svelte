@@ -39,7 +39,10 @@
 		--font-mono:    'Geist Mono', 'Courier New', monospace;
 
 		--max-w:     72rem;
-		--reading-w: 42rem;
+		/* Widened from 42rem. Two things happened: the root font-size going to
+		   80% had silently shrunk this rem-based column from 672px to 538px, and
+		   the restored 672px was still tighter than wanted. */
+		--reading-w: 62.5rem;
 	}
 
 	/* ── Reset ────────────────────────────────────────── */
