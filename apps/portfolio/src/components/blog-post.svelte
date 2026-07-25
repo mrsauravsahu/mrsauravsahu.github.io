@@ -1,6 +1,6 @@
 <script>
 	import { DateTime, Duration } from 'luxon';
-	import { fadeNavigate } from './paper';
+	import { fadeNavigate, imageState } from './paper';
 	export let blog;
 
 	$: href = `/blog/posts/${blog.id}`;
@@ -44,7 +44,7 @@
 	{:else}
 		<div class="inner">
 			<div class="tile-frame">
-				<img src={blog.coverImageUrl} alt={blog.title} loading="lazy" decoding="async" on:load={() => (coverLoaded = true)} on:error={() => (imgFailed = true)} />
+				<img src={blog.coverImageUrl} alt={blog.title} loading="lazy" decoding="async" use:imageState={{ ready: () => (coverLoaded = true), failed: () => (imgFailed = true) }} />
 			</div>
 			<div class="caption">
 				<span class="p-title">{blog.title}</span>

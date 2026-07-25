@@ -1,15 +1,15 @@
 /**
- * "Paper opening" motion — shared by the photo modal and the blog cards.
+ * Opening motion — shared by the photo modal and the blog cards.
  *
- * The whole site is built out of paper: polaroids on a table, ruled index
- * cards, prints in a mat. Opening one should feel like picking that sheet up
- * off the table and bringing it right up to your face — it hinges up from
- * where it was lying, unfolds flat, and flies at the screen.
+ * A print opens by zooming: it grows out of the exact tile you clicked, from
+ * that tile's size and position, straight up to full size. Because the modal
+ * plate carries the same 4:3 crop as the tile, that's one continuous move on
+ * the same image rather than a cut to a differently-framed one.
  *
- * Only photos get that treatment, though — they're the thing you came to look
- * at. Posts you came to *read*, so they get a quiet cross-fade instead.
+ * Photos zoom because they're the thing you came to look at. Posts you came to
+ * *read*, so they get a quiet cross-fade instead.
  *
- *   - `paperOpen`    — a Svelte transition, for content that opens in place
+ *   - `zoomOpen`     — a Svelte transition, for content that opens in place
  *                      (the photo modal).
  *   - `fadeNavigate` — a Svelte action, for links that should dim out and hand
  *                      over to the destination page.
@@ -17,54 +17,110 @@
 import { cubicOut } from 'svelte/easing';
 import { goto, preloadData } from '$app/navigation';
 
-const PERSPECTIVE = 1100;
-
 export function prefersReducedMotion(): boolean {
 	return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Centre of an element, in viewport coordinates. */
-export function centreOf(el: Element): { x: number; y: number } {
-	const r = el.getBoundingClientRect();
-	return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+type ImageHandlers = {
+	ready?: (img: HTMLImageElement) => void;
+	/** Typically swaps in a fallback src — the `load` from that retry still fires. */
+	failed?: (img: HTMLImageElement) => void;
+};
+
+/**
+ * Svelte action: report when an image has pixels, or has definitively failed.
+ *
+ * Plain `on:load` / `on:error` handlers are not enough here. The markup is
+ * server-rendered, so the browser starts fetching during parse and the image
+ * has usually settled — loaded *or* 404'd — before Svelte hydrates and attaches
+ * its listeners. Those events have been and gone, so neither handler fires:
+ * a card gated on `load` stays hidden forever, and a src gated on `error` never
+ * gets swapped for its fallback. Both halves have to be checked up front.
+ *
+ * `complete` alone doesn't distinguish the two — a broken image is also
+ * complete — so `naturalWidth` is what actually separates loaded from failed.
+ *
+ * Listeners stay attached after firing: `failed` typically swaps in a fallback
+ * src, and we need the `load` from that second attempt.
+ */
+export function imageState(node: HTMLImageElement, handlers: ImageHandlers) {
+	let current = handlers;
+
+	const onLoad = () => current.ready?.(node);
+	const onError = () => current.failed?.(node);
+
+	node.addEventListener('load', onLoad);
+	node.addEventListener('error', onError);
+
+	if (node.complete) {
+		if (node.naturalWidth > 0) onLoad();
+		else onError();
+	}
+
+	return {
+		update(next: ImageHandlers) {
+			current = next;
+		},
+		destroy() {
+			node.removeEventListener('load', onLoad);
+			node.removeEventListener('error', onError);
+		}
+	};
 }
 
-type PaperOpenOptions = {
-	/** Viewport point the sheet is picked up from — usually the thumbnail's centre. */
-	from?: { x: number; y: number };
-	/** How wide the sheet is at rest, relative to its open size. */
-	startScale?: number;
+export type Origin = { x: number; y: number; width: number; height: number };
+
+/**
+ * Where an element sits and how big it really is, in viewport coordinates.
+ *
+ * `getBoundingClientRect` alone won't do: the tiles are rotated a few degrees,
+ * and it returns the axis-aligned box *around* the rotation, which is several
+ * percent wider and taller than the tile itself. Its centre is still correct,
+ * so take the position from there and the size from the layout box.
+ */
+export function rectOf(el: HTMLElement): Origin {
+	const r = el.getBoundingClientRect();
+	return {
+		x: r.left + r.width / 2,
+		y: r.top + r.height / 2,
+		width: el.offsetWidth,
+		height: el.offsetHeight
+	};
+}
+
+type ZoomOpenOptions = {
+	/** The tile the print is growing out of — centre and true size (see `rectOf`). */
+	from?: Origin | null;
 	duration?: number;
 };
 
 /**
- * Svelte transition: the node starts small, lying back on the table at the
- * `from` point, then hinges upright along its bottom edge as it flies forward
- * to its final size. Reversed on the way out, so closing lays it back down.
+ * Svelte transition: the node grows out of `from` — starting at that rect's
+ * size and centred on it — up to its own final size and position. Reversed on
+ * the way out, so closing shrinks it back into the tile it came from.
+ *
+ * The start scale is measured rather than guessed: the tile's width over the
+ * node's own width, so the first frame of the zoom is exactly the size of the
+ * thumbnail underneath it and the two read as the same object.
  */
-export function paperOpen(
-	node: Element,
-	{ from, startScale = 0.16, duration = 460 }: PaperOpenOptions = {}
-) {
+export function zoomOpen(node: Element, { from, duration = 420 }: ZoomOpenOptions = {}) {
 	if (prefersReducedMotion()) {
 		return { duration: 120, css: (t: number) => `opacity: ${t};` };
 	}
 
-	const here = centreOf(node);
-	const dx = (from?.x ?? here.x) - here.x;
-	const dy = (from?.y ?? here.y) - here.y;
+	const here = node.getBoundingClientRect();
+	const dx = from ? from.x - (here.left + here.width / 2) : 0;
+	const dy = from ? from.y - (here.top + here.height / 2) : 0;
+	// Guard the degenerate cases: no origin rect, or a node with no layout yet.
+	const s0 = from && here.width > 0 ? Math.min(0.9, from.width / here.width) : 0.2;
 
 	return {
 		duration,
 		easing: cubicOut,
 		css: (t: number, u: number) =>
-			`transform-origin: 50% 100%;
-			 transform: perspective(${PERSPECTIVE}px)
-				translate(${dx * u}px, ${dy * u}px)
-				rotateX(${-74 * u}deg)
-				rotate(${-4 * u}deg)
-				scale(${startScale + (1 - startScale) * t});
-			 opacity: ${Math.min(1, t * 2.2)};`
+			`transform-origin: 50% 50%;
+			 transform: translate(${dx * u}px, ${dy * u}px) scale(${s0 + (1 - s0) * t});
+			 opacity: ${Math.min(1, t * 3)};`
 	};
 }
 
