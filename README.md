@@ -24,6 +24,26 @@ npm run deploy            # runs export (build) then pushes build/ to gh-pages
 # export writes CNAME (mrsauravsahu.in) + .nojekyll; deploy force-pushes to the gh-pages branch
 ```
 
+#### the deploy domain comes from the CNAME file
+
+**Always deploy to the domain already in the `CNAME` file on the `gh-pages`
+branch. Never hardcode a different one.** There is no `CNAME` tracked in this
+repo — it exists only on `gh-pages`, and because `deploy` force-pushes, whatever
+`build/CNAME` says silently replaces the live custom domain. Point it at a
+domain GitHub Pages isn't serving and the site goes down.
+
+Check the current value before any manual deploy:
+
+```bash
+git fetch origin gh-pages
+git show origin/gh-pages:CNAME    # mrsauravsahu.in
+```
+
+`npm run export` writes the correct value, so `npm run deploy` is the safe path.
+Beware `apps/portfolio/deploy.sh`, which duplicates the export/deploy pipeline
+but hardcodes a **stale** `next.mrsauravsahu.tech` — running it repoints the
+domain and takes the site down. Prefer the npm scripts.
+
 **The build fetches blog data at build time** (baked into static HTML), so a
 reachable blogs GraphQL API is required or the build hard-fails (empty blog
 list → prerender crawl error; see [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 4).
