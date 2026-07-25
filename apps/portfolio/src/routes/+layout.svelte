@@ -29,7 +29,7 @@
 		--surface-alt: #221d17;
 		--mat:         #ede9e2;
 		--border:      #2c2620;
-		--text:        #f2ede4;
+		--text:        #000000;
 		--text-muted:  #a2988a;
 		--accent:      #d9a441;
 		--accent-dim:  #8a6a2e;
