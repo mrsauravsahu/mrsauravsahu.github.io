@@ -9,8 +9,14 @@
 //   static/photos-opt/full/<name>.webp    modal view  (max ~800px wide)
 //
 // Sizes are 2x the max on-screen size to stay crisp on HiDPI displays.
-// Output is gitignored and regenerated on every `npm run build`. Idempotent:
-// a derivative is only re-encoded when the source is newer.
+// Output is gitignored and regenerated on every `npm run build` AND `npm run
+// dev`. Idempotent: a derivative is only re-encoded when the source is newer,
+// so a warm re-run costs ~0.3s.
+//
+// `dev` runs it too because otherwise the derivatives are missing there and
+// every tile falls back to its multi-MB original — ~11 MB and several seconds
+// to first paint on a checkout that has never been built, which looks like a
+// site performance problem but isn't one.
 //
 // EXIF orientation matters here — several originals carry an orientation tag
 // (e.g. Galaxy "upper-right"). sharp().rotate() with no args bakes that

@@ -2,7 +2,7 @@
   "name": "portfolio",
   "version": "0.0.1",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "npm run optimize:photos && vite dev",
     "optimize:photos": "node scripts/optimize-photos.js",
     "build": "npm run optimize:photos && vite build",
     "preview": "svelte-kit preview",
