@@ -524,14 +524,24 @@
 		   it blurred breaks the illusion at the exact moment the two are meant to
 		   be the same object. Letting it soften as the card outgrows its own
 		   resolution is both continuous and what actually enlarging a print
-		   looks like. */
-		filter: blur(0) saturate(0.92);
+		   looks like.
+
+		   Everything else this image does has to arrive the same way, for the
+		   same reason: the slight overscale that hides the blur bleeding past the
+		   edges, and the desaturation. Held from the first frame they'd make the
+		   photo 3% larger and duller than the tile it's supposed to *be* — a
+		   mismatch in both size and colour at the one moment the two are
+		   overlaid. */
+		filter: blur(0) saturate(1);
+		transform: scale(1);
 		animation: thumb-enlarge 420ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
-		transform: scale(1.03); /* hides the blur bleeding past the edges */
 	}
 
 	@keyframes thumb-enlarge {
-		to { filter: blur(6px) saturate(0.92); }
+		to {
+			filter: blur(6px) saturate(0.92);
+			transform: scale(1.03);
+		}
 	}
 
 	.modal-img {
@@ -546,6 +556,7 @@
 		.modal-thumb {
 			animation: none;
 			filter: blur(6px) saturate(0.92);
+			transform: scale(1.03);
 		}
 	}
 

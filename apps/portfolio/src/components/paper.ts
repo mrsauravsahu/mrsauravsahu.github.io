@@ -96,18 +96,34 @@ function transformOf(el: HTMLElement): { rotation: number; scale: number } {
  * whatever transform is in play, since a tile is under the pointer (and so
  * hover-scaled) at the moment it's clicked.
  *
- * `el` is the thing being measured; `transformFrom` is where the rotation and
- * scale are read from, for when the two differ — the photo window is measured,
- * but it's the card around it that carries the transform.
+ * `el` is the thing being measured; `transformFrom` is where the rotation is
+ * read from, for when the two differ — the photo window is measured, but it's
+ * the card around it that carries the transform.
+ *
+ * The size is recovered from the bounding box rather than taken from
+ * `offsetWidth`. For a box rotated by θ the browser reports
+ * `W = w·|cos| + h·|sin|` and `H = w·|sin| + h·|cos|`, which inverts exactly, so
+ * this gives the true drawn size — fractional, and with the hover scale already
+ * baked in. `offsetWidth` is rounded to whole pixels and would leave the zoom's
+ * first frame off by a fraction of a pixel.
  */
 export function rectOf(el: HTMLElement, transformFrom: HTMLElement = el): Origin {
 	const r = el.getBoundingClientRect();
 	const { rotation, scale } = transformOf(transformFrom);
+
+	const rad = (rotation * Math.PI) / 180;
+	const cos = Math.abs(Math.cos(rad));
+	const sin = Math.abs(Math.sin(rad));
+	// cos²−sin² = cos(2θ), which only vanishes at 45° — far outside the few
+	// degrees of scatter the tiles use, but fall back rather than divide by ~0.
+	const det = cos * cos - sin * sin;
+	const solvable = Math.abs(det) > 1e-3;
+
 	return {
 		x: r.left + r.width / 2,
 		y: r.top + r.height / 2,
-		width: el.offsetWidth * scale,
-		height: el.offsetHeight * scale,
+		width: solvable ? (r.width * cos - r.height * sin) / det : el.offsetWidth * scale,
+		height: solvable ? (r.height * cos - r.width * sin) / det : el.offsetHeight * scale,
 		rotation
 	};
 }
