@@ -87,6 +87,66 @@ export function veil(node: Element, { duration = 420 }: { duration?: number } = 
 	};
 }
 
+/** A photo window's centre and width, in viewport coordinates. */
+export type PhotoOrigin = { x: number; y: number; width: number };
+
+/**
+ * Svelte transition for the paper a print is mounted on — the mat and the
+ * caption — growing in step with the print itself.
+ *
+ * crossfade moves the photo, but it can only move the one element it's paired
+ * to. Left alone the paper just fades in at full size while the photo flies into
+ * it, so the two travel at visibly different rates and the polaroid stops
+ * reading as a single object.
+ *
+ * The paper can't simply be crossfaded too: it's a different shape at each end
+ * (the mat and caption are sized in rem, so a thumbnail's border is
+ * proportionally much chunkier than a full plate's), and crossfade scales x and
+ * y independently, so pairing them would squash it.
+ *
+ * So it's driven off the photo instead. Same easing and duration as the
+ * crossfade, scaled about the photo's own centre and translated so that centre
+ * tracks the print — which makes the whole card one object moving at one rate,
+ * while the photo keeps crossfade's exact landing.
+ *
+ * This has to live on a *sibling* of the plate. On an ancestor it would multiply
+ * into crossfade's own scale and the photo would grow quadratically.
+ */
+export function paperGrow(
+	node: Element,
+	{ from, duration = 420 }: { from?: PhotoOrigin | null; duration?: number } = {}
+) {
+	if (prefersReducedMotion()) {
+		return { duration: 120, css: (t: number) => `opacity: ${t};` };
+	}
+
+	const plate = node.parentElement?.querySelector('.modal-plate');
+	const p = plate?.getBoundingClientRect();
+	if (!from || !p || p.width === 0) {
+		return { duration, easing: cubicOut, css: (t: number) => `opacity: ${t};` };
+	}
+
+	const n = node.getBoundingClientRect();
+	const px = p.left + p.width / 2;
+	const py = p.top + p.height / 2;
+
+	const s0 = from.width / p.width;
+	// The photo's centre, in this node's own coordinates — what the paper scales
+	// about, so it grows around the print rather than away from it.
+	const ox = px - n.left;
+	const oy = py - n.top;
+	const dx = from.x - px;
+	const dy = from.y - py;
+
+	return {
+		duration,
+		easing: cubicOut,
+		css: (t: number, u: number) =>
+			`transform-origin: ${ox}px ${oy}px;
+			 transform: translate(${dx * u}px, ${dy * u}px) scale(${s0 + (1 - s0) * t});`
+	};
+}
+
 /** Plain left-click with no modifiers — anything else is the browser's business. */
 function isPlainClick(e: MouseEvent): boolean {
 	return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;

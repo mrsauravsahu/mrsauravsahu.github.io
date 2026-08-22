@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { crossfade, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { veil, imageState, prefersReducedMotion } from '../components/paper';
+	import { veil, paperGrow, imageState, prefersReducedMotion, type PhotoOrigin } from '../components/paper';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -104,7 +104,19 @@
 	// belongs to.
 	let openKey = '';
 
-	function openPhoto(photo: Photo) {
+	// The clicked tile's photo window, which the paper grows out of and shrinks
+	// back into. Deliberately not cleared on close, for the same reason as
+	// `openKey` — the closing transition still needs it. `:hover` has already
+	// squared the tile up by the time it can be clicked, so this rect is the
+	// photo's true size with the hover scale in it, not a rotated bounding box.
+	let photoOrigin: PhotoOrigin | null = null;
+
+	function openPhoto(e: MouseEvent, photo: Photo) {
+		const win = (e.currentTarget as HTMLElement).querySelector('.tile-frame');
+		if (win) {
+			const r = win.getBoundingClientRect();
+			photoOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2, width: r.width };
+		}
 		fullReady = false;
 		selectedPhoto = photo;
 		liftedFrom = photo.filename;
@@ -157,7 +169,7 @@
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={() => openPhoto(photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
 							<!-- The photo is the `send`/`receive` half that flies. It's absolutely
@@ -235,11 +247,16 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 	<div class="modal-backdrop" transition:veil={{ duration: 420 }} on:click={closePhoto}>
 		<div class="modal-frame" on:click|stopPropagation>
-			<!-- The mat is a separate sheet behind the print rather than the frame's
-			     own background, so it can fade in on its own. Fading the frame would
-			     fade the print with it — the print is its child — and a print that
-			     shows the grid through it is not the print you just picked up. -->
-			<div class="mat-sheet" transition:fade|global={{ duration: 300 }}></div>
+			<!-- The paper: the mat behind the print and the caption below it, as one
+			     layer so they grow together. It sits *beside* the plate rather than
+			     around it — an ancestor's scale would multiply into crossfade's and
+			     the photo would grow quadratically. -->
+			<div class="modal-chrome" transition:paperGrow|global={{ from: photoOrigin }}>
+				<div class="mat-sheet"></div>
+				{#if selectedPhoto.caption}
+					<p class="modal-caption">{selectedPhoto.caption}</p>
+				{/if}
+			</div>
 			<!-- The thumb is already decoded (it's the tile you just clicked), so it
 			     paints instantly and gives the plate its height. The full-res fades
 			     in on top once ready — warm from hover, that swap is invisible.
@@ -274,9 +291,6 @@
 					/>
 				</div>
 			{/key}
-			{#if selectedPhoto.caption}
-				<p class="modal-caption" transition:fade|global={{ duration: 300 }}>{selectedPhoto.caption}</p>
-			{/if}
 		</div>
 	</div>
 {/if}
@@ -546,8 +560,15 @@
 		cursor: default;
 	}
 
-	/* The paper the print is mounted on. It's a sheet of its own rather than the
-	   frame's background so it can fade in independently — see the markup. */
+	/* The paper layer: mat plus caption, transformed as one so the card grows at
+	   the print's rate. Absolute, so it can carry that transform without the
+	   frame's layout — which is what fixes the plate's size — moving with it. */
+	.modal-chrome {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+	}
+
 	.mat-sheet {
 		position: absolute;
 		inset: 0;
@@ -557,8 +578,7 @@
 
 	/* Above the mat, and establishing the stacking order the flying print needs
 	   to stay on top of the paper it lands on. */
-	.modal-plate,
-	.modal-caption {
+	.modal-plate {
 		position: relative;
 		z-index: 1;
 	}
@@ -648,8 +668,13 @@
 	   than at the dark table, so its caption is black on the mat instead of the
 	   warm grey used on the tiles. */
 	.modal-caption {
+		position: absolute;
+		left: 0;
+		right: 0;
+		/* Sits in the frame's bottom padding, which the plate's layout still
+		   reserves even though the caption no longer takes part in it. */
+		bottom: 0.85rem;
 		text-align: center;
-		margin-top: 0.75rem;
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
 		letter-spacing: 0.08em;
