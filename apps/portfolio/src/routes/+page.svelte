@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { zoomOpen, veil, rectOf, imageState, type Origin } from '../components/paper';
+	import { crossfade, fade } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	import { veil, imageState, prefersReducedMotion } from '../components/paper';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -19,9 +21,39 @@
 		if (!img.src.endsWith(original)) img.src = original;
 	}
 	let topPhoto: number | null = null;
-	// The tile the print zooms out of — its rect gives the zoom both its
-	// starting position and its starting size.
-	let origin: Origin | null = null;
+
+	// The print flying between the grid and the modal is one `crossfade` pair:
+	// the tile's photo hands off to the plate on the way in, and back again on
+	// the way out. Svelte measures both ends and does the FLIP itself.
+	//
+	// The pair is deliberately the *photo windows* rather than the whole cards.
+	// crossfade scales x and y independently, so pairing the cards would squash
+	// the print — their aspect ratios differ by 15%, because the mat and caption
+	// are sized in rem and don't stay proportional between a thumbnail and a full
+	// plate. The photo windows are 4:3 at both ends, so that same independent
+	// scale comes out uniform on its own.
+	//
+	// Rotation needs no handling here: a tile is unrotated by `:hover` (and by
+	// `:focus`) before it can be clicked, so the rect crossfade measures is
+	// square-on and already includes the hover scale.
+	//
+	// Everything inside the modal is marked `|global`. Transitions are local by
+	// default in Svelte 4, meaning they're skipped when it's an enclosing block
+	// rather than the element's own that appears — and the plate's enclosing
+	// blocks (the `{#if selectedPhoto}` and the `{#key}`) are created by the same
+	// click. Without it the print doesn't fly at all; it simply appears.
+	const [send, receive] = crossfade({
+		duration: () => (prefersReducedMotion() ? 0 : 420),
+		easing: cubicOut,
+		// No counterpart on screen — the tile was never rendered, or the grid
+		// re-ordered underneath. Grow gently in place rather than flying from
+		// nowhere.
+		fallback: () => ({
+			duration: prefersReducedMotion() ? 0 : 240,
+			easing: cubicOut,
+			css: (t: number) => `opacity: ${t}; transform: scale(${0.94 + 0.06 * t});`
+		})
+	});
 
 	// The full-res file is much heavier than the thumb, so fetching it only on
 	// click means the paper finishes flying before there is anything to show.
@@ -55,22 +87,33 @@
 		tileLoaded = tileLoaded;
 	}
 
-	// The tile the open print grew out of. While the modal is up it *is* that
-	// tile — one card, moved and enlarged — so the original has to leave the grid
-	// for the duration. It keeps its space (visibility, not display), and comes
-	// back only once the print has finished shrinking into it.
-	let zoomingFrom: string | null = null;
+	// Which tile has had its print lifted out. That photo leaves the grid so it
+	// can be the `send` half of the pair — the empty mat stays behind, which is
+	// what a print actually leaves on the table.
+	//
+	// It has to flip in the same tick as `selectedPhoto`, in both directions:
+	// crossfade only pairs a `send` with a `receive` that happen together, and
+	// deferring the restore to the modal's outroend would leave the print with
+	// nothing to fly home to.
+	let liftedFrom: string | null = null;
 
-	function openPhoto(e: MouseEvent, photo: Photo) {
-		// Measure the photo window rather than the whole tile: that 4:3 window is
-		// the one thing shared exactly between a thumbnail and a full plate, so
-		// it's what the zoom is anchored on. The transform still comes off the
-		// card, which is what carries the scatter and the hover scale.
-		const card = e.currentTarget as HTMLElement;
-		origin = rectOf(card.querySelector<HTMLElement>('.tile-frame') ?? card, card);
+	// The same key, but deliberately *not* cleared on close. Svelte re-evaluates
+	// a transition's parameters as the modal is torn down, and reading
+	// `selectedPhoto.filename` at that point throws — by then it's null. This
+	// outlives the close so the departing print still knows which tile it
+	// belongs to.
+	let openKey = '';
+
+	function openPhoto(photo: Photo) {
 		fullReady = false;
 		selectedPhoto = photo;
-		zoomingFrom = photo.filename;
+		liftedFrom = photo.filename;
+		openKey = photo.filename;
+	}
+
+	function closePhoto() {
+		selectedPhoto = null;
+		liftedFrom = null;
 	}
 
 	// ── Terminal easter egg ────────────────────────────────
@@ -81,7 +124,7 @@
 	const MAGIC = 'sudo';
 
 	function onKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') { selectedPhoto = null; return; }
+		if (e.key === 'Escape') { closePhoto(); return; }
 		if (terminalOpen) return;
 
 		const target = e.target as HTMLElement;
@@ -114,10 +157,15 @@
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} class:lifted={zoomingFrom === photo.filename} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={() => openPhoto(photo)}>
 					<div class="inner">
 						<div class="tile-frame">
-							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" use:imageState={{ ready: () => markTileLoaded(photo), failed: (img) => fallbackToOriginal(img, photo) }} />
+							<!-- The photo is the `send`/`receive` half that flies. It's absolutely
+							     positioned inside the frame, so taking it out leaves the card's
+							     size — and the pile's layout — completely untouched. -->
+							{#if liftedFrom !== photo.filename}
+								<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" in:receive={{ key: photo.filename }} out:send={{ key: photo.filename }} use:imageState={{ ready: () => markTileLoaded(photo), failed: (img) => fallbackToOriginal(img, photo) }} />
+							{/if}
 						</div>
 						<span class="tile-label">{photo.caption}</span>
 					</div>
@@ -185,8 +233,13 @@
 <!-- ── Photo modal ───────────────────────────────────────── -->
 {#if selectedPhoto}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-	<div class="modal-backdrop" transition:veil={{ duration: 420 }} on:click={() => selectedPhoto = null}>
-		<div class="modal-frame" transition:zoomOpen={{ from: origin, anchor: '.modal-plate' }} on:outroend={() => (zoomingFrom = null)} on:click|stopPropagation>
+	<div class="modal-backdrop" transition:veil={{ duration: 420 }} on:click={closePhoto}>
+		<div class="modal-frame" on:click|stopPropagation>
+			<!-- The mat is a separate sheet behind the print rather than the frame's
+			     own background, so it can fade in on its own. Fading the frame would
+			     fade the print with it — the print is its child — and a print that
+			     shows the grid through it is not the print you just picked up. -->
+			<div class="mat-sheet" transition:fade|global={{ duration: 300 }}></div>
 			<!-- The thumb is already decoded (it's the tile you just clicked), so it
 			     paints instantly and gives the plate its height. The full-res fades
 			     in on top once ready — warm from hover, that swap is invisible.
@@ -195,7 +248,11 @@
 			     exists. Without it on the thumb the plate collapses to zero height
 			     and takes the absolutely-positioned full-res down with it. -->
 			{#key selectedPhoto.full}
-				<div class="modal-plate">
+				<div
+					class="modal-plate"
+					in:receive|global={{ key: openKey }}
+					out:send|global={{ key: openKey }}
+				>
 					<img
 						src={selectedPhoto.thumb}
 						alt=""
@@ -218,7 +275,7 @@
 				</div>
 			{/key}
 			{#if selectedPhoto.caption}
-				<p class="modal-caption">{selectedPhoto.caption}</p>
+				<p class="modal-caption" transition:fade|global={{ duration: 300 }}>{selectedPhoto.caption}</p>
 			{/if}
 		</div>
 	</div>
@@ -396,7 +453,12 @@
 
 	.dump-item.loaded { opacity: 1; }
 
-	.dump-item:hover {
+	/* Focus lifts the tile exactly as hover does. Beyond matching the pointer,
+	   it's what squares the tile up before it can be activated — the crossfade
+	   measures whatever rect is on screen at that moment, and a rotated one
+	   reports its inflated bounding box. */
+	.dump-item:hover,
+	.dump-item:focus-visible {
 		transform: rotate(0deg) scale(1.12) !important;
 		z-index: 20;
 		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s;
@@ -406,14 +468,6 @@
 		z-index: 10;
 	}
 
-	/* The open print is this tile, relocated — so the tile itself steps out of
-	   the grid until the print comes back down. `visibility` rather than
-	   `opacity` so there's no fade fighting the zoom, and rather than `display`
-	   so the pile doesn't reflow around the gap. */
-	.dump-item.lifted {
-		visibility: hidden;
-	}
-
 	.dump-item .inner {
 		background: var(--mat);
 		padding: 0.5rem 0.5rem 1.75rem;
@@ -421,7 +475,8 @@
 		transition: box-shadow 0.2s ease;
 	}
 
-	.dump-item:hover .inner {
+	.dump-item:hover .inner,
+	.dump-item:focus-visible .inner {
 		box-shadow: 10px 10px 28px rgba(0,0,0,0.7);
 	}
 
@@ -444,7 +499,8 @@
 		transition: opacity 0.3s ease, transform 0.3s ease;
 	}
 
-	.dump-item:hover .tile-frame img {
+	.dump-item:hover .tile-frame img,
+	.dump-item:focus-visible .tile-frame img {
 		opacity: 1;
 	}
 
@@ -481,14 +537,42 @@
 	}
 
 	.modal-frame {
-		background: var(--mat);
+		position: relative;
 		padding: 0.75rem 0.75rem 2.5rem;
-		box-shadow: 0 20px 60px rgba(0,0,0,0.8);
 		/* The last term keeps the 4:3 plate inside the viewport height, so the
 		   print never has to be squeezed out of its aspect ratio to fit. */
 		max-width: min(90vw, 800px, calc(62vh * 4 / 3));
 		width: 100%;
 		cursor: default;
+	}
+
+	/* The paper the print is mounted on. It's a sheet of its own rather than the
+	   frame's background so it can fade in independently — see the markup. */
+	.mat-sheet {
+		position: absolute;
+		inset: 0;
+		background: var(--mat);
+		box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+	}
+
+	/* Above the mat, and establishing the stacking order the flying print needs
+	   to stay on top of the paper it lands on. */
+	.modal-plate,
+	.modal-caption {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* crossfade dissolves as well as moves, and there's no option to turn that
+	   off — so overrule it. An `!important` declaration outranks an animated
+	   value, which leaves crossfade's transform intact and drops only its
+	   opacity ramp.
+	   That ramp is wrong here: the two halves only sum back to a solid image if
+	   both are visible, and the tile half is behind a backdrop that's busy
+	   darkening to near-black. What you actually saw was the pile and the hero
+	   text straight through the print. */
+	.modal-plate {
+		opacity: 1 !important;
 	}
 
 	/* Same 4:3 window as the tiles in the grid (`.tile-frame`, padding-top 75%)
