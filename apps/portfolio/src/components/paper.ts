@@ -68,7 +68,23 @@ export function imageState(node: HTMLImageElement, handlers: ImageHandlers) {
 	};
 }
 
-export type Origin = { x: number; y: number; width: number; height: number };
+export type Origin = { x: number; y: number; width: number; height: number; rotation: number };
+
+/**
+ * The angle an element is currently drawn at, in degrees, read back out of its
+ * computed transform matrix. The tiles sit at a few degrees of scatter, and the
+ * zoom has to start at that same angle or the print visibly snaps upright on
+ * its first frame instead of straightening as it grows.
+ */
+function transformOf(el: HTMLElement): { rotation: number; scale: number } {
+	const t = getComputedStyle(el).transform;
+	if (!t || t === 'none') return { rotation: 0, scale: 1 };
+	const m = new DOMMatrixReadOnly(t);
+	return {
+		rotation: (Math.atan2(m.b, m.a) * 180) / Math.PI,
+		scale: Math.hypot(m.a, m.b) || 1
+	};
+}
 
 /**
  * Where an element sits and how big it really is, in viewport coordinates.
@@ -76,15 +92,37 @@ export type Origin = { x: number; y: number; width: number; height: number };
  * `getBoundingClientRect` alone won't do: the tiles are rotated a few degrees,
  * and it returns the axis-aligned box *around* the rotation, which is several
  * percent wider and taller than the tile itself. Its centre is still correct,
- * so take the position from there and the size from the layout box.
+ * so take the position from there and the size from the layout box — scaled by
+ * whatever the tile's own transform is doing, since a tile is under the pointer
+ * (and so hover-scaled) at the moment it's clicked.
  */
 export function rectOf(el: HTMLElement): Origin {
 	const r = el.getBoundingClientRect();
+	const { rotation, scale } = transformOf(el);
 	return {
 		x: r.left + r.width / 2,
 		y: r.top + r.height / 2,
-		width: el.offsetWidth,
-		height: el.offsetHeight
+		width: el.offsetWidth * scale,
+		height: el.offsetHeight * scale,
+		rotation
+	};
+}
+
+/**
+ * Svelte transition for the modal's backing sheet: the darkness comes up, but
+ * the element itself never drops below full opacity.
+ *
+ * A plain `fade` here would be wrong. The print is a child of this node, so the
+ * backdrop's opacity multiplies into it — a card that's meant to read as the
+ * physical tile you just picked up spends its whole flight semi-transparent,
+ * with the grid showing through it. Animating only the colour leaves the print
+ * solid from the first frame.
+ */
+export function veil(node: Element, { duration = 420 }: { duration?: number } = {}) {
+	return {
+		duration,
+		easing: cubicOut,
+		css: (t: number) => `background-color: rgba(0, 0, 0, ${0.9 * t});`
 	};
 }
 
@@ -95,13 +133,26 @@ type ZoomOpenOptions = {
 };
 
 /**
- * Svelte transition: the node grows out of `from` — starting at that rect's
- * size and centred on it — up to its own final size and position. Reversed on
- * the way out, so closing shrinks it back into the tile it came from.
+ * Svelte transition: the node grows out of `from` — starting at that tile's
+ * exact position, size and angle — up to its own final size and position.
+ * Reversed on the way out, so closing shrinks it back into the tile it came
+ * from.
  *
- * The start scale is measured rather than guessed: the tile's width over the
- * node's own width, so the first frame of the zoom is exactly the size of the
- * thumbnail underneath it and the two read as the same object.
+ * This is a FLIP, not a zoom-in-spirit: every part of the start state is
+ * measured off the tile rather than guessed, so the first frame of the modal
+ * lands precisely on top of the tile that was clicked. That's what makes it read
+ * as one card expanding instead of a new card appearing.
+ *
+ *   - x and y scale independently. The tile and the plate are both 4:3 in the
+ *     image window, but the mat around them isn't the same shape, so a single
+ *     uniform scale leaves the two frames misaligned by several percent — enough
+ *     to see the photo jump inside its border.
+ *   - the rotation unwinds over the move, so the print straightens as it grows
+ *     rather than snapping upright at frame one.
+ *
+ * Opacity deliberately stays at 1 throughout: the modal is standing in for a
+ * tile that's already been hidden, and anything less than opaque shows the empty
+ * gap in the grid through it.
  */
 export function zoomOpen(node: Element, { from, duration = 420 }: ZoomOpenOptions = {}) {
 	if (prefersReducedMotion()) {
@@ -109,18 +160,24 @@ export function zoomOpen(node: Element, { from, duration = 420 }: ZoomOpenOption
 	}
 
 	const here = node.getBoundingClientRect();
-	const dx = from ? from.x - (here.left + here.width / 2) : 0;
-	const dy = from ? from.y - (here.top + here.height / 2) : 0;
-	// Guard the degenerate cases: no origin rect, or a node with no layout yet.
-	const s0 = from && here.width > 0 ? Math.min(0.9, from.width / here.width) : 0.2;
+	if (!from || here.width === 0 || here.height === 0) {
+		return { duration, easing: cubicOut, css: (t: number) => `opacity: ${t};` };
+	}
+
+	const dx = from.x - (here.left + here.width / 2);
+	const dy = from.y - (here.top + here.height / 2);
+	const sx = from.width / here.width;
+	const sy = from.height / here.height;
 
 	return {
 		duration,
 		easing: cubicOut,
+		// `u` is 1 - t: at t=0 the node sits exactly where the tile is.
 		css: (t: number, u: number) =>
 			`transform-origin: 50% 50%;
-			 transform: translate(${dx * u}px, ${dy * u}px) scale(${s0 + (1 - s0) * t});
-			 opacity: ${Math.min(1, t * 3)};`
+			 transform: translate(${dx * u}px, ${dy * u}px)
+			            rotate(${from.rotation * u}deg)
+			            scale(${sx + (1 - sx) * t}, ${sy + (1 - sy) * t});`
 	};
 }
 

@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
-	import { zoomOpen, rectOf, imageState, type Origin } from '../components/paper';
+	import { zoomOpen, veil, rectOf, imageState, type Origin } from '../components/paper';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -56,10 +55,17 @@
 		tileLoaded = tileLoaded;
 	}
 
+	// The tile the open print grew out of. While the modal is up it *is* that
+	// tile — one card, moved and enlarged — so the original has to leave the grid
+	// for the duration. It keeps its space (visibility, not display), and comes
+	// back only once the print has finished shrinking into it.
+	let zoomingFrom: string | null = null;
+
 	function openPhoto(e: MouseEvent, photo: Photo) {
 		origin = rectOf(e.currentTarget as HTMLElement);
 		fullReady = false;
 		selectedPhoto = photo;
+		zoomingFrom = photo.filename;
 	}
 
 	// ── Terminal easter egg ────────────────────────────────
@@ -103,7 +109,7 @@
 		<div class="photo-dump">
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} class:lifted={zoomingFrom === photo.filename} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
 							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" use:imageState={{ ready: () => markTileLoaded(photo), failed: (img) => fallbackToOriginal(img, photo) }} />
@@ -174,8 +180,8 @@
 <!-- ── Photo modal ───────────────────────────────────────── -->
 {#if selectedPhoto}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-	<div class="modal-backdrop" transition:fade={{ duration: 260 }} on:click={() => selectedPhoto = null}>
-		<div class="modal-frame" transition:zoomOpen={{ from: origin }} on:click|stopPropagation>
+	<div class="modal-backdrop" transition:veil={{ duration: 420 }} on:click={() => selectedPhoto = null}>
+		<div class="modal-frame" transition:zoomOpen={{ from: origin }} on:outroend={() => (zoomingFrom = null)} on:click|stopPropagation>
 			<!-- The thumb is already decoded (it's the tile you just clicked), so it
 			     paints instantly and gives the plate its height. The full-res fades
 			     in on top once ready — warm from hover, that swap is invisible.
@@ -395,6 +401,14 @@
 		z-index: 10;
 	}
 
+	/* The open print is this tile, relocated — so the tile itself steps out of
+	   the grid until the print comes back down. `visibility` rather than
+	   `opacity` so there's no fade fighting the zoom, and rather than `display`
+	   so the pile doesn't reflow around the gap. */
+	.dump-item.lifted {
+		visibility: hidden;
+	}
+
 	.dump-item .inner {
 		background: var(--mat);
 		padding: 0.5rem 0.5rem 1.75rem;
@@ -452,7 +466,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0,0,0,0.9);
+		background: rgba(0, 0, 0, 0.9);
 		z-index: 200;
 		display: flex;
 		align-items: center;
@@ -498,9 +512,21 @@
 
 	.modal-thumb {
 		/* A tile-sized file blown up to plate size — a touch of blur reads as a
-		   print still developing rather than as a low-quality image. */
-		filter: blur(6px) saturate(0.92);
+		   print still developing rather than as a low-quality image.
+
+		   The blur arrives over the zoom rather than being there from the first
+		   frame. At tile size this file is sharp — it *is* the tile, and starting
+		   it blurred breaks the illusion at the exact moment the two are meant to
+		   be the same object. Letting it soften as the card outgrows its own
+		   resolution is both continuous and what actually enlarging a print
+		   looks like. */
+		filter: blur(0) saturate(0.92);
+		animation: thumb-enlarge 420ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
 		transform: scale(1.03); /* hides the blur bleeding past the edges */
+	}
+
+	@keyframes thumb-enlarge {
+		to { filter: blur(6px) saturate(0.92); }
 	}
 
 	.modal-img {
@@ -512,6 +538,10 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.modal-img { transition: none; }
+		.modal-thumb {
+			animation: none;
+			filter: blur(6px) saturate(0.92);
+		}
 	}
 
 	/* The zoomed print is the one place the reader is looking at paper rather
