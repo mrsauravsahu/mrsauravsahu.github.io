@@ -62,7 +62,12 @@
 	let zoomingFrom: string | null = null;
 
 	function openPhoto(e: MouseEvent, photo: Photo) {
-		origin = rectOf(e.currentTarget as HTMLElement);
+		// Measure the photo window rather than the whole tile: that 4:3 window is
+		// the one thing shared exactly between a thumbnail and a full plate, so
+		// it's what the zoom is anchored on. The transform still comes off the
+		// card, which is what carries the scatter and the hover scale.
+		const card = e.currentTarget as HTMLElement;
+		origin = rectOf(card.querySelector<HTMLElement>('.tile-frame') ?? card, card);
 		fullReady = false;
 		selectedPhoto = photo;
 		zoomingFrom = photo.filename;
@@ -181,7 +186,7 @@
 {#if selectedPhoto}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 	<div class="modal-backdrop" transition:veil={{ duration: 420 }} on:click={() => selectedPhoto = null}>
-		<div class="modal-frame" transition:zoomOpen={{ from: origin }} on:outroend={() => (zoomingFrom = null)} on:click|stopPropagation>
+		<div class="modal-frame" transition:zoomOpen={{ from: origin, anchor: '.modal-plate' }} on:outroend={() => (zoomingFrom = null)} on:click|stopPropagation>
 			<!-- The thumb is already decoded (it's the tile you just clicked), so it
 			     paints instantly and gives the plate its height. The full-res fades
 			     in on top once ready — warm from hover, that swap is invisible.

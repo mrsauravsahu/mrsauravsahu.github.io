@@ -93,12 +93,16 @@ function transformOf(el: HTMLElement): { rotation: number; scale: number } {
  * and it returns the axis-aligned box *around* the rotation, which is several
  * percent wider and taller than the tile itself. Its centre is still correct,
  * so take the position from there and the size from the layout box — scaled by
- * whatever the tile's own transform is doing, since a tile is under the pointer
- * (and so hover-scaled) at the moment it's clicked.
+ * whatever transform is in play, since a tile is under the pointer (and so
+ * hover-scaled) at the moment it's clicked.
+ *
+ * `el` is the thing being measured; `transformFrom` is where the rotation and
+ * scale are read from, for when the two differ — the photo window is measured,
+ * but it's the card around it that carries the transform.
  */
-export function rectOf(el: HTMLElement): Origin {
+export function rectOf(el: HTMLElement, transformFrom: HTMLElement = el): Origin {
 	const r = el.getBoundingClientRect();
-	const { rotation, scale } = transformOf(el);
+	const { rotation, scale } = transformOf(transformFrom);
 	return {
 		x: r.left + r.width / 2,
 		y: r.top + r.height / 2,
@@ -127,8 +131,10 @@ export function veil(node: Element, { duration = 420 }: { duration?: number } = 
 }
 
 type ZoomOpenOptions = {
-	/** The tile the print is growing out of — centre and true size (see `rectOf`). */
+	/** The tile's *photo window* — centre and true size (see `rectOf`). */
 	from?: Origin | null;
+	/** Selector for the matching photo window inside the node being zoomed. */
+	anchor?: string;
 	duration?: number;
 };
 
@@ -138,46 +144,82 @@ type ZoomOpenOptions = {
  * Reversed on the way out, so closing shrinks it back into the tile it came
  * from.
  *
- * This is a FLIP, not a zoom-in-spirit: every part of the start state is
- * measured off the tile rather than guessed, so the first frame of the modal
- * lands precisely on top of the tile that was clicked. That's what makes it read
- * as one card expanding instead of a new card appearing.
+ * This is a FLIP, not a zoom-in-spirit: the start state is measured off the tile
+ * rather than guessed, so the first frame of the modal lands on the tile that
+ * was clicked. That's what makes it read as one card expanding instead of a new
+ * card appearing. The rotation unwinds over the move too, so the print
+ * straightens as it grows rather than snapping upright at frame one.
  *
- *   - x and y scale independently. The tile and the plate are both 4:3 in the
- *     image window, but the mat around them isn't the same shape, so a single
- *     uniform scale leaves the two frames misaligned by several percent — enough
- *     to see the photo jump inside its border.
- *   - the rotation unwinds over the move, so the print straightens as it grows
- *     rather than snapping upright at frame one.
+ * The scale is deliberately *uniform*, and it's the photo window — not the card
+ * — that the motion is anchored on.
+ *
+ * Matching the two cards edge-to-edge instead would mean scaling x and y by
+ * different factors, because the mat and caption around the photo are sized in
+ * rem and so aren't proportional between a thumbnail and a full plate. Any such
+ * difference is a squash: the card visibly stretches along one axis and relaxes
+ * over the flight, which is what reads as jagged. The photo window is a true
+ * 4:3 in both, so anchoring there gives one honest scale factor, the photo
+ * itself tracks perfectly, and the only thing that doesn't match exactly is the
+ * width of the paper border — a couple of pixels, against distortion across the
+ * whole card.
+ *
+ * Keeping the photo pinned while the scale is uniform means the translation has
+ * to be solved per frame rather than lerped: the node scales about its own
+ * centre, which is not the photo's centre, so the offset that holds the photo in
+ * place changes as the scale does.
  *
  * Opacity deliberately stays at 1 throughout: the modal is standing in for a
  * tile that's already been hidden, and anything less than opaque shows the empty
  * gap in the grid through it.
  */
-export function zoomOpen(node: Element, { from, duration = 420 }: ZoomOpenOptions = {}) {
+export function zoomOpen(node: Element, { from, anchor, duration = 420 }: ZoomOpenOptions = {}) {
 	if (prefersReducedMotion()) {
 		return { duration: 120, css: (t: number) => `opacity: ${t};` };
 	}
 
 	const here = node.getBoundingClientRect();
-	if (!from || here.width === 0 || here.height === 0) {
+	const anchorEl = anchor ? node.querySelector(anchor) : null;
+	const target = (anchorEl ?? node).getBoundingClientRect();
+
+	if (!from || target.width === 0 || here.width === 0) {
 		return { duration, easing: cubicOut, css: (t: number) => `opacity: ${t};` };
 	}
 
-	const dx = from.x - (here.left + here.width / 2);
-	const dy = from.y - (here.top + here.height / 2);
-	const sx = from.width / here.width;
-	const sy = from.height / here.height;
+	// Node centre (what `transform-origin: 50% 50%` scales about), the photo
+	// window's centre, and the offset between them.
+	const cx = here.left + here.width / 2;
+	const cy = here.top + here.height / 2;
+	const px = target.left + target.width / 2;
+	const py = target.top + target.height / 2;
+	const vx = px - cx;
+	const vy = py - cy;
+
+	const s0 = from.width / target.width;
 
 	return {
 		duration,
 		easing: cubicOut,
-		// `u` is 1 - t: at t=0 the node sits exactly where the tile is.
-		css: (t: number, u: number) =>
-			`transform-origin: 50% 50%;
-			 transform: translate(${dx * u}px, ${dy * u}px)
-			            rotate(${from.rotation * u}deg)
-			            scale(${sx + (1 - sx) * t}, ${sy + (1 - sy) * t});`
+		css: (t: number, u: number) => {
+			const s = s0 + (1 - s0) * t;
+			const rad = (from.rotation * u * Math.PI) / 180;
+			const cos = Math.cos(rad);
+			const sin = Math.sin(rad);
+
+			// Where the photo's centre should be right now: from the tile's photo
+			// window at t=0 to the plate's at t=1.
+			const wantX = from.x + (px - from.x) * t;
+			const wantY = from.y + (py - from.y) * t;
+
+			// The photo's centre lands at `c + T + R(rot)·(s·v)`, so solve for the
+			// T that puts it on `want`. At t=1 this is exactly zero.
+			const tx = wantX - cx - s * (vx * cos - vy * sin);
+			const ty = wantY - cy - s * (vx * sin + vy * cos);
+
+			return `transform-origin: 50% 50%;
+			        transform: translate(${tx}px, ${ty}px)
+			                   rotate(${from.rotation * u}deg)
+			                   scale(${s});`;
+		}
 	};
 }
 
