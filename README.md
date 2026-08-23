@@ -29,43 +29,37 @@ builds have to reach that API across the host↔cluster boundary, which is where
 they go wrong — quietly, in the case that matters, because a build that can't
 see the API produces a *successful* export with no blog posts in it.
 
-The pod already has `BLOGS_API_URL=http://blogs` (in-cluster DNS) and is
-hostPath-mounted to `apps/portfolio`, so it sidesteps host networking entirely
-and the output lands on your disk with no copying. Set the cluster up under
-[local dev](#local-dev-kubernetes) first, then:
-
-```bash
-kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
-  'cd /app && npm run export && d=build-$(date +%s) && mv build "$d" && \
-   chown -R $(stat -c "%u:%g" .) "$d" && echo "OUT_DIR=$d"'
-```
-
-- The container runs as root, so the `chown` is what keeps the output
-  deletable by you afterwards.
-- Output is a timestamped `build-<epoch>/` (gitignored via `build-*`) so runs
-  don't clobber each other.
-
-### publish to GitHub Pages
-
-Publishing pushes the directory the pod produced, and nothing else. Requires
-SSH push access to `origin`.
+The pod has `BLOGS_API_URL=http://blogs` (in-cluster DNS), so it sidesteps host
+networking entirely. Bring the stack up under [local dev](#local-dev-kubernetes)
+first, then:
 
 ```bash
 cd apps/portfolio
-mv build-<epoch> build
-
-# Never publish without this check — see the CNAME section below.
-[ -s build/CNAME ] || { echo "build/CNAME missing — would drop the domain"; exit 1; }
-echo "deploying to $(cat build/CNAME)"
-
-npx gh-pages -d ./build -b gh-pages -t -f
+./build-site.sh                 # or: npm run build:site
 ```
 
-**Don't use `npm run deploy` or `deploy.sh` as they stand.** Both run
-`npm run build` on the host first, which is exactly the unreliable path this
-section exists to avoid — and it would silently overwrite the pod's build with
-a host one before pushing. They need that build step dropped before they can be
-the publish command again.
+It builds in the pod, `kubectl cp`s the result back to the host, and prints the
+directory it wrote. That's a timestamped `build-<epoch>/` by default (gitignored
+via `build-*`) so runs never clobber each other; pass a name to choose your own.
+The pod builds to a scratch directory and the copy only happens on success, so a
+failed run can't leave a half-built tree where a good one was.
+
+Override the target with `NAMESPACE=` / `DEPLOY=` if you're not on the defaults
+(`mrsauravsahu-dev` / `portfolio`).
+
+### publish to GitHub Pages
+
+`deploy.sh` takes the directory to publish and does not build — pass it what
+`build-site.sh` printed. Requires SSH push access to `origin`.
+
+```bash
+./deploy.sh build-<epoch>       # or: npm run deploy -- build-<epoch>
+```
+
+Before pushing it checks the directory is a real site (`index.html`), that
+`CNAME` is present and non-empty, and that `blog.html` exists — the last one
+catches the silent failure above, where a build that never reached the blogs API
+would otherwise publish the site with an empty blog.
 
 ### the deploy domain comes from the CNAME file
 
@@ -78,10 +72,9 @@ deletes anything on `gh-pages` that is missing from `build/`. So a hardcoded
 `build/CNAME` silently repoints the live domain, and a *missing* one deletes it
 outright — either way GitHub Pages stops serving the site.
 
-That is what the check in the publish step above is guarding against: it
-refuses to push a build with no `build/CNAME` rather than take the site down.
-`deploy.sh` carries the same check (alongside the host build that makes it
-unusable as-is).
+`deploy.sh` therefore hard-fails if the build's `CNAME` is absent or empty
+rather than publishing something that would drop the domain, and echoes the
+target domain before pushing.
 
 To verify what is actually live:
 
@@ -90,9 +83,9 @@ git fetch origin gh-pages
 git show origin/gh-pages:CNAME    # mrsauravsahu.in
 ```
 
-Note `npm run export` still writes `build/CNAME` itself with the same value —
-redundant now that `static/CNAME` is tracked, but harmless as long as the two
-agree. Keep them in sync if you change the domain.
+`npm run export` no longer writes `build/CNAME` itself — it used to hardcode the
+domain, which is the exact footgun described above. The tracked `static/CNAME` is
+now the only place the domain is written down.
 
 The live domain right now is `mrsauravsahu.in`, served from apex `A` records
 pointing at GitHub's `185.199.108–111.153`, with `www` a `CNAME` to the apex.

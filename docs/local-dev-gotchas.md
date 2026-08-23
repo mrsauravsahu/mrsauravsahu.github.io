@@ -84,24 +84,22 @@ mount — no redeploy needed after rebuilding.
 
 ## The export/deploy build: inside the cluster, not the host
 
-This is the only supported way to produce a publishable build. `kubectl exec`
-into the running `portfolio` pod and build there: it already has
-`BLOGS_API_URL=http://blogs` (in-cluster DNS, always reliable) and is
-hostPath-mounted to `apps/portfolio`, so output appears on the host with no
-`kubectl cp`.
+This is the only supported way to produce a publishable build. `apps/portfolio/build-site.sh`
+runs `npm run export` inside the `portfolio` pod — which has
+`BLOGS_API_URL=http://blogs` (in-cluster DNS, always reliable) — and `kubectl cp`s
+the result back to the host.
 
 ```bash
-kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
-  'cd /app && npm run export && d=build-$(date +%s) && mv build "$d" && \
-   chown -R $(stat -c "%u:%g" .) "$d" && echo "OUT_DIR=$d"'
+cd apps/portfolio && ./build-site.sh      # prints the build-<epoch> dir it wrote
+./deploy.sh build-<epoch>                 # checks, then publishes to gh-pages
 ```
 
-- Container runs as root → output would be undeletable by you without the
-  `chown` (uses `/app`'s host-owning uid:gid).
-- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't
-  clobber each other. `gh-pages` expects a plain `build/` — rename, or point
-  `gh-pages -d` at the timestamped dir. See the README's publish step; don't
-  use `npm run deploy`/`deploy.sh`, which rebuild on the host.
+- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't clobber
+  each other. The pod builds to a scratch dir and copies only on success.
+- `deploy.sh` never builds. It takes a directory and verifies it before pushing:
+  `index.html`, a non-empty `CNAME`, and `blog.html` — the last catches the
+  Gotcha 2 failure, where a build that never reached the API publishes an empty
+  blog.
 - Spot-check without touching k8s: `npx http-server apps/portfolio/build-<epoch> -p 8080`.
   Doesn't replicate clean-URL routing though — use `:local_static` for that.
 
