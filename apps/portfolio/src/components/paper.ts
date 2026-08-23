@@ -1,16 +1,17 @@
 /**
- * Opening motion — shared by the photo modal and the blog cards.
+ * Opening motion — shared by the photo grid and the blog cards.
  *
- * A print opens by zooming: it grows out of the exact tile you clicked, from
- * that tile's size and position, straight up to full size. Because the modal
- * plate carries the same 4:3 crop as the tile, that's one continuous move on
- * the same image rather than a cut to a differently-framed one.
+ * Photos are the thing you came to look at, so a print comes to you: the tile
+ * you clicked is translated, rotated square-on and scaled up until it's held in
+ * front of you. That's plain CSS on the card itself, in the page — no second
+ * element, nothing to hand over to. The pieces here are the supporting cast.
  *
- * Photos zoom because they're the thing you came to look at. Posts you came to
- * *read*, so they get a quiet cross-fade instead.
+ * Posts you came to *read*, so they get a quiet cross-fade to the next page
+ * instead.
  *
- *   - `zoomOpen`     — a Svelte transition, for content that opens in place
- *                      (the photo modal).
+ *   - `veil`         — a Svelte transition for the backdrop behind a lifted
+ *                      print, which darkens without fading what sits on top.
+ *   - `imageState`   — a Svelte action reporting when an image really has pixels.
  *   - `fadeNavigate` — a Svelte action, for links that should dim out and hand
  *                      over to the destination page.
  */
@@ -46,7 +47,33 @@ type ImageHandlers = {
 export function imageState(node: HTMLImageElement, handlers: ImageHandlers) {
 	let current = handlers;
 
-	const onLoad = () => current.ready?.(node);
+	/**
+	 * `load` means the bytes arrived, not that the browser can paint them — the
+	 * decode still has to happen, and on a large photo that lands a frame or
+	 * more later. Revealing on `load` alone is what puts a half-painted print on
+	 * screen. `decode()` resolves only once there's a frame ready to draw, so
+	 * waiting on it is what makes "loaded" mean *showable*.
+	 *
+	 * The src is re-checked afterwards: a failure typically swaps in a fallback,
+	 * and a decode still in flight for the old one must not report the new one
+	 * ready. If decode isn't available or rejects spuriously, a complete image
+	 * with real pixels is good enough to show.
+	 */
+	const onLoad = () => {
+		const src = node.currentSrc || node.src;
+		if (typeof node.decode !== 'function') {
+			current.ready?.(node);
+			return;
+		}
+		node.decode().then(
+			() => {
+				if ((node.currentSrc || node.src) === src) current.ready?.(node);
+			},
+			() => {
+				if (node.complete && node.naturalWidth > 0) current.ready?.(node);
+			}
+		);
+	};
 	const onError = () => current.failed?.(node);
 
 	node.addEventListener('load', onLoad);
@@ -68,59 +95,20 @@ export function imageState(node: HTMLImageElement, handlers: ImageHandlers) {
 	};
 }
 
-export type Origin = { x: number; y: number; width: number; height: number };
-
 /**
- * Where an element sits and how big it really is, in viewport coordinates.
+ * Svelte transition for the modal's backing sheet: the darkness comes up, but
+ * the element itself never drops below full opacity.
  *
- * `getBoundingClientRect` alone won't do: the tiles are rotated a few degrees,
- * and it returns the axis-aligned box *around* the rotation, which is several
- * percent wider and taller than the tile itself. Its centre is still correct,
- * so take the position from there and the size from the layout box.
+ * A plain `fade` would leave the whole sheet translucent as it arrives, so the
+ * pile it's meant to be hiding stays faintly visible through it for the length
+ * of the flight. Animating only the colour brings the room down to black
+ * cleanly, and never touches the card being lifted in front of it.
  */
-export function rectOf(el: HTMLElement): Origin {
-	const r = el.getBoundingClientRect();
-	return {
-		x: r.left + r.width / 2,
-		y: r.top + r.height / 2,
-		width: el.offsetWidth,
-		height: el.offsetHeight
-	};
-}
-
-type ZoomOpenOptions = {
-	/** The tile the print is growing out of — centre and true size (see `rectOf`). */
-	from?: Origin | null;
-	duration?: number;
-};
-
-/**
- * Svelte transition: the node grows out of `from` — starting at that rect's
- * size and centred on it — up to its own final size and position. Reversed on
- * the way out, so closing shrinks it back into the tile it came from.
- *
- * The start scale is measured rather than guessed: the tile's width over the
- * node's own width, so the first frame of the zoom is exactly the size of the
- * thumbnail underneath it and the two read as the same object.
- */
-export function zoomOpen(node: Element, { from, duration = 420 }: ZoomOpenOptions = {}) {
-	if (prefersReducedMotion()) {
-		return { duration: 120, css: (t: number) => `opacity: ${t};` };
-	}
-
-	const here = node.getBoundingClientRect();
-	const dx = from ? from.x - (here.left + here.width / 2) : 0;
-	const dy = from ? from.y - (here.top + here.height / 2) : 0;
-	// Guard the degenerate cases: no origin rect, or a node with no layout yet.
-	const s0 = from && here.width > 0 ? Math.min(0.9, from.width / here.width) : 0.2;
-
+export function veil(node: Element, { duration = 420 }: { duration?: number } = {}) {
 	return {
 		duration,
 		easing: cubicOut,
-		css: (t: number, u: number) =>
-			`transform-origin: 50% 50%;
-			 transform: translate(${dx * u}px, ${dy * u}px) scale(${s0 + (1 - s0) * t});
-			 opacity: ${Math.min(1, t * 3)};`
+		css: (t: number) => `background-color: rgba(0, 0, 0, ${0.9 * t});`
 	};
 }
 

@@ -38,7 +38,7 @@ services:
       context: .
       dockerfile: common/docker/node-dev.dockerfile
       args:
-        NODE_VERSION: "18.17.1"
+        NODE_VERSION: "20.11.1"
     volumes:
       - ./apps/portfolio:/app
       - portfolio_node_modules:/app/node_modules
@@ -63,7 +63,7 @@ services:
       context: .
       dockerfile: common/docker/node-dev.dockerfile
       args:
-        NODE_VERSION: "18.17.1"
+        NODE_VERSION: "20.11.1"
     volumes:
       - ./apps/portfolio:/app
       - export_node_modules:/app/node_modules
