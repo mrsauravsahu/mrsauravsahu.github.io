@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>Adding TypeScript to Sapper Projects · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">Adding TypeScript to Sapper Projects</h1> <p class="post-meta svelte-u7gps3">Wednesday, July 22 2020 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> 5 minutes read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>Today the <a href="https://svelte.dev">svelte</a> team announced that TypeScript is finally officially supported in svelte apps. Their <a href="https://svelte.dev/blog/svelte-and-typescript">blog</a> explains really well how to setup TypeScript for a svelte project. Well... I've been creating this portfolio for a while now - and it uses sapper, so I thought why not try and setup TypeScript for this project 🤷‍♂️ and see how difficult is it, as the other blog left out that part. </p><p>So that is what I've done, and, this is how you setup TypeScript in a sapper app. By the way, the steps are pretty much the same as the official blog, but there are few gotchas, which I will address here.</p><p>Note: I'm currently working on the syntax highlighting in the code snippets on the blog - so sorry about that. 🙂</p><h3 id="1-install-the-necessary-packages-for-the-migration">1. Install the necessary packages for the migration.</h3><pre class="bash"><code>pnpm i -D @tsconfig/svelte typescript svelte-preprocess svelte-check @rollup/plugin-typescript</code></pre><p>I use <a href="https://pnpm.js.org/">pnpm</a> and I absolutely ❤️ it.</p><h3 id="2-add-a-tsconfigjson-for-typescript-love">2. Add a tsconfig.json for TypeScript Love</h3><pre class="json"><code>{
+    "extends": "@tsconfig/svelte/tsconfig.json",
+    "include": [
+        "src/**/*",
+        "src/node_modules"
+    ],
+    "exclude": [
+        "node_modules/*",
+        "__sapper__/*",
+        "public/*"
+    ],
+}</code></pre><p>This is the basic tsconfig.json required for both svelte and sapper apps, and should work. Check if you need to do some modifications to it.</p><h3 id="3-update-the-rollup-config">3. Update the rollup config</h3><p>Basically add preprocessing of TypeScript in svelte files and compilation of TypeScript files. My diff looks like this:</p><pre class="diff"><code>diff --git a/@mrsauravsahu/site/rollup.config.js b/@mrsauravsahu/site/rollup.config.js
+...
++import autoPreprocess from 'svelte-preprocess';
++import typeScript from '@rollup/plugin-typescript';
+...
+@@ -28,13 +30,15 @@ export default {
+             svelte({
+                 dev,
+                 hydratable: true,
+-				emitCss: true
++				emitCss: true,
++				preprocess: autoPreprocess(),
+             }),
+             resolve({
+                 browser: true,
+                 dedupe: ['svelte']
+             }),
+             commonjs(),
++			typeScript({ sourceMap: dev }),
+ 
+             legacy &amp;&amp; babel({
+                 extensions: ['.js', '.mjs', '.html', '.svelte'],
+@@ -72,12 +76,14 @@ export default {
+             }),
+             svelte({
+                 generate: 'ssr',
+-				dev
++				dev,
++				preprocess: autoPreprocess(),
+             }),
+             resolve({
+                 dedupe: ['svelte']
+             }),
+-			commonjs()
++			commonjs(),
++			typeScript({ sourceMap: dev }),
+         ],
+         external: Object.keys(pkg.dependencies).concat(
+             require('module').builtinModules || Object.keys(process.binding('natives'))
+@@ -96,6 +102,7 @@ export default {
+                 'process.env.NODE_ENV': JSON.stringify(mode)
+             }),
+             commonjs(),
++			typeScript({ sourceMap: dev }),
+             !dev &amp;&amp; terser()
+         ],</code></pre><p>Well, basically add the autoPreprocess plugin to everywhere where sapper might have to preprocess svelte file - the client and server sections. And add the typeScript plugin to all the sections - because, well, "TypeScript Everywhere 😎"</p><h3 id="4-now-the-time-taking-task---let-the-renaming-begin">4. Now the time taking task - let the renaming begin</h3><p>Update all <code>.js</code> files to <code>.ts</code> and add the <code>lang="ts"</code> attribute to all script sections in <code>.svelte</code> files. I could whip up the bash script for this, but I'm going to be careful and since there aren't a lot of files, going to do this manually for now. 😅</p><p>Oh, you know what? I'm going to use VSCode to update the script tags with a find and replace</p><pre class=""><code>Find: '&lt;script'
+Files to include: 'src/**/*.svelte'
+Replace with: '&lt;script lang="ts"'</code></pre><p>Now, well, since the service-worker is auto-generated, I don't really want to deal with the typings in there for now, so I'm just going to ignore that entire file by adding a <code>/// @ts-nocheck</code> at the top of the file</p><h3 id="5-check-the-compilation">5. Check the compilation</h3><p>If you run an <code>pnpm build (or npm build)</code>, you'll see errors like so:</p><pre class="bash"><code>✗ server
+@rollup/plugin-typescript TS2307: Cannot find module '@sapper/app' or its corresponding type declarations.
+
+1 import * as sapper from '@sapper/app';
+                          ~~~~~~~~~~~~~
+
+✗ client
+@rollup/plugin-typescript TS2307: Cannot find module '@sapper/app' or its corresponding type declarations.
+
+1 import * as sapper from '@sapper/app';
+                          ~~~~~~~~~~~~~</code></pre><p>Well, this is because sapper doesn't ship with typings yet. I'm not going to write the typings by hand, so, for now, let's add a place holder so that the typeScript compiler can simply add <code>any</code> type to all declarations within sapper.</p><p>And to do that, we have to update our tsconfig.json like so:</p><pre class="diff"><code>diff --git a/@mrsauravsahu/site/tsconfig.json b/@mrsauravsahu/site/tsconfig.json
+index c711e13..6fd2c46 100644
+--- a/@mrsauravsahu/site/tsconfig.json
++++ b/@mrsauravsahu/site/tsconfig.json
+@@ -9,4 +9,13 @@
+         "__sapper__/*",
+         "public/*"
+     ],
++    "compilerOptions": {
++        "typeRoots": [
++            "types"
++        ],
++        "types": [
++            "node",
++            "@sapper"
++        ]
++    }
+ }
+\ No newline at end of file
+</code></pre><p>So this tells TypeScripts that we will be defining our types in a folder called <code>types</code> and the compilation should include the types for node and sapper. Oh, we also need the types for node and some typeScript helper libraries, this is because we're using them in our <code>src/server.ts</code> file, so install these:</p><pre class="bash"><code>pnpm i -D @types/node tslib</code></pre><h3 id="6-add-dummy-typings-for-sapper">6. Add dummy typings for Sapper</h3><p>Create a file called <code>types/@sapper/index.d.ts</code> (creating the folders as required) and add the dummy typings as shown below in that file:</p><pre class="js"><code>declare module '@sapper';
+declare module '@sapper/app';
+declare module '@sapper/server';</code></pre><h3 id="7-check-the-compilation-again">7. Check the compilation, again</h3><p>If you try and build now, sapper won't be able to find the entry files to the app. That's because sapper is looking for the <code>src/client.js</code>, <code>src/server.js</code> and <code>src/service-worker.js</code> files, which we renamed. 😂</p><pre class="bash"><code>> Building...
+
+[!] Error: Could not resolve entry module (src/client.js).</code></pre><p>So, to fix this, let's update the <code>input</code> fields in all the three sections of <code>rollup.config.js</code></p><pre class="diff"><code>diff --git a/@mrsauravsahu/site/rollup.config.js b/@mrsauravsahu/site/rollup.config.js
+...
+ export default {
+     client: {
+-		input: config.client.input(),
++		input: config.client.input().replace(/\.js$/, '.ts'),
+         output: config.client.output(),
+         plugins: [
+             json(),
+@@ -66,7 +66,7 @@ export default {
+     },
+ 
+     server: {
+-		input: config.server.input(),
++		input: input: config.server.input().server.replace(/\.js$/, '.ts'),
+         output: config.server.output(),
+         plugins: [
+             json(),
+@@ -93,7 +93,7 @@ export default {
+     },
+ 
+     serviceworker: {
+-		input: config.serviceworker.input(),
++		input: config.serviceworker.input().replace(/\.js$/, '.ts'),
+         output: config.serviceworker.output(),
+         plugins: [
+             resolve(),
+...</code></pre><p>and FINALLY... drum rolls please... 🥁🥁🥁 the compilation should succeed... with a ridiculous number of warnings. You can check all the svelte warnings with <code>pnpx svelte-check</code> or <code>npx svelte-check</code> as well. To run the sapper projects, you might have to suppress the warnings or fix them first though. But after that... it's all well and good. Now that you have TypeScript ready in your project, you'll have better IntelliSense and you can incrementally fix and augment the typings in your app. Once sapper ships their typings, you can delete the dummy <code>index.d.ts</code> file and use the official one as well.</p><p>This was a fun blog and I've been waiting for this for so long. Let's talk more about svelte and sapper and all things cool. HMU on twitter</p><p> <a href="https://twitter.com/mrsauravsahu">@mrsauravsahu on Twitter</a></p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:38,title:"Adding TypeScript to Sapper Projects",description:"Finally! Let's add TypeScript to an exising Sapper project",createdAt:"2020-07-22T00:25:37.000Z",approxTimeToRead:"PT5M",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"38",blogContent:"Today the [svelte](https://svelte.dev) team announced that TypeScript is finally officially supported in svelte apps. Their [blog](https://svelte.dev/blog/svelte-and-typescript) explains really well how to setup TypeScript for a svelte project. Well... I've been creating this portfolio for a while now - and it uses sapper, so I thought why not try and setup TypeScript for this project 🤷‍♂️ and see how difficult is it, as the other blog left out that part. \n\nSo that is what I've done, and, this is how you setup TypeScript in a sapper app. By the way, the steps are pretty much the same as the official blog, but there are few gotchas, which I will address here.\n\nNote: I'm currently working on the syntax highlighting in the code snippets on the blog - so sorry about that. 🙂\n\n### 1. Install the necessary packages for the migration. \n\n```bash\npnpm i -D @tsconfig/svelte typescript svelte-preprocess svelte-check @rollup/plugin-typescript\n```\n\nI use [pnpm](https://pnpm.js.org/) and I absolutely ❤️ it.\n\n### 2. Add a tsconfig.json for TypeScript Love\n\n```json\n{\n    \"extends\": \"@tsconfig/svelte/tsconfig.json\",\n    \"include\": [\n        \"src/**/*\",\n        \"src/node_modules\"\n    ],\n    \"exclude\": [\n        \"node_modules/*\",\n        \"__sapper__/*\",\n        \"public/*\"\n    ],\n}\n```\nThis is the basic tsconfig.json required for both svelte and sapper apps, and should work. Check if you need to do some modifications to it.\n\n\n### 3. Update the rollup config\nBasically add preprocessing of TypeScript in svelte files and compilation of TypeScript files. My diff looks like this:\n\n```diff\ndiff --git a/@mrsauravsahu/site/rollup.config.js b/@mrsauravsahu/site/rollup.config.js\n...\n+import autoPreprocess from 'svelte-preprocess';\n+import typeScript from '@rollup/plugin-typescript';\n...\n@@ -28,13 +30,15 @@ export default {\n \t\t\tsvelte({\n \t\t\t\tdev,\n \t\t\t\thydratable: true,\n-\t\t\t\temitCss: true\n+\t\t\t\temitCss: true,\n+\t\t\t\tpreprocess: autoPreprocess(),\n \t\t\t}),\n \t\t\tresolve({\n \t\t\t\tbrowser: true,\n \t\t\t\tdedupe: ['svelte']\n \t\t\t}),\n \t\t\tcommonjs(),\n+\t\t\ttypeScript({ sourceMap: dev }),\n \n \t\t\tlegacy && babel({\n \t\t\t\textensions: ['.js', '.mjs', '.html', '.svelte'],\n@@ -72,12 +76,14 @@ export default {\n \t\t\t}),\n \t\t\tsvelte({\n \t\t\t\tgenerate: 'ssr',\n-\t\t\t\tdev\n+\t\t\t\tdev,\n+\t\t\t\tpreprocess: autoPreprocess(),\n \t\t\t}),\n \t\t\tresolve({\n \t\t\t\tdedupe: ['svelte']\n \t\t\t}),\n-\t\t\tcommonjs()\n+\t\t\tcommonjs(),\n+\t\t\ttypeScript({ sourceMap: dev }),\n \t\t],\n \t\texternal: Object.keys(pkg.dependencies).concat(\n \t\t\trequire('module').builtinModules || Object.keys(process.binding('natives'))\n@@ -96,6 +102,7 @@ export default {\n \t\t\t\t'process.env.NODE_ENV': JSON.stringify(mode)\n \t\t\t}),\n \t\t\tcommonjs(),\n+\t\t\ttypeScript({ sourceMap: dev }),\n \t\t\t!dev && terser()\n \t\t],\n```\n\nWell, basically add the autoPreprocess plugin to everywhere where sapper might have to preprocess svelte file - the client and server sections. And add the typeScript plugin to all the sections - because, well, \"TypeScript Everywhere 😎\"\n\n### 4. Now the time taking task - let the renaming begin\nUpdate all `.js` files to `.ts` and add the `lang=\"ts\"` attribute to all script sections in `.svelte` files. I could whip up the bash script for this, but I'm going to be careful and since there aren't a lot of files, going to do this manually for now. 😅\n\nOh, you know what? I'm going to use VSCode to update the script tags with a find and replace\n```\nFind: '\u003Cscript'\nFiles to include: 'src/**/*.svelte'\nReplace with: '\u003Cscript lang=\"ts\"'\n```\n\nNow, well, since the service-worker is auto-generated, I don't really want to deal with the typings in there for now, so I'm just going to ignore that entire file by adding a `/// @ts-nocheck` at the top of the file\n\n### 5. Check the compilation\n\nIf you run an `pnpm build (or npm build)`, you'll see errors like so:\n\n```bash\n✗ server\n@rollup/plugin-typescript TS2307: Cannot find module '@sapper/app' or its corresponding type declarations.\n\n1 import * as sapper from '@sapper/app';\n                          ~~~~~~~~~~~~~\n\n✗ client\n@rollup/plugin-typescript TS2307: Cannot find module '@sapper/app' or its corresponding type declarations.\n\n1 import * as sapper from '@sapper/app';\n                          ~~~~~~~~~~~~~\n```\n\nWell, this is because sapper doesn't ship with typings yet. I'm not going to write the typings by hand, so, for now, let's add a place holder so that the typeScript compiler can simply add `any` type to all declarations within sapper.\n\nAnd to do that, we have to update our tsconfig.json like so:\n\n```diff\ndiff --git a/@mrsauravsahu/site/tsconfig.json b/@mrsauravsahu/site/tsconfig.json\nindex c711e13..6fd2c46 100644\n--- a/@mrsauravsahu/site/tsconfig.json\n+++ b/@mrsauravsahu/site/tsconfig.json\n@@ -9,4 +9,13 @@\n         \"__sapper__/*\",\n         \"public/*\"\n     ],\n+    \"compilerOptions\": {\n+        \"typeRoots\": [\n+            \"types\"\n+        ],\n+        \"types\": [\n+            \"node\",\n+            \"@sapper\"\n+        ]\n+    }\n }\n\\ No newline at end of file\n\n```\n\nSo this tells TypeScripts that we will be defining our types in a folder called `types` and the compilation should include the types for node and sapper. Oh, we also need the types for node and some typeScript helper libraries, this is because we're using them in our `src/server.ts` file, so install these:\n\n```bash\npnpm i -D @types/node tslib\n```\n\n### 6. Add dummy typings for Sapper\n\nCreate a file called `types/@sapper/index.d.ts` (creating the folders as required) and add the dummy typings as shown below in that file:\n\n```js\ndeclare module '@sapper';\ndeclare module '@sapper/app';\ndeclare module '@sapper/server';\n```\n\n### 7. Check the compilation, again\n\nIf you try and build now, sapper won't be able to find the entry files to the app. That's because sapper is looking for the `src/client.js`, `src/server.js` and `src/service-worker.js` files, which we renamed. 😂\n\n```bash\n> Building...\n\n[!] Error: Could not resolve entry module (src/client.js).\n```\n\nSo, to fix this, let's update the `input` fields in all the three sections of `rollup.config.js`\n\n```diff\ndiff --git a/@mrsauravsahu/site/rollup.config.js b/@mrsauravsahu/site/rollup.config.js\n...\n export default {\n \tclient: {\n-\t\tinput: config.client.input(),\n+\t\tinput: config.client.input().replace(/\\.js$/, '.ts'),\n \t\toutput: config.client.output(),\n \t\tplugins: [\n \t\t\tjson(),\n@@ -66,7 +66,7 @@ export default {\n \t},\n \n \tserver: {\n-\t\tinput: config.server.input(),\n+\t\tinput: input: config.server.input().server.replace(/\\.js$/, '.ts'),\n \t\toutput: config.server.output(),\n \t\tplugins: [\n \t\t\tjson(),\n@@ -93,7 +93,7 @@ export default {\n \t},\n \n \tserviceworker: {\n-\t\tinput: config.serviceworker.input(),\n+\t\tinput: config.serviceworker.input().replace(/\\.js$/, '.ts'),\n \t\toutput: config.serviceworker.output(),\n \t\tplugins: [\n \t\t\tresolve(),\n...\n```\n\nand FINALLY... drum rolls please... 🥁🥁🥁 the compilation should succeed... with a ridiculous number of warnings. You can check all the svelte warnings with `pnpx svelte-check` or `npx svelte-check` as well. To run the sapper projects, you might have to suppress the warnings or fix them first though. But after that... it's all well and good. Now that you have TypeScript ready in your project, you'll have better IntelliSense and you can incrementally fix and augment the typings in your app. Once sapper ships their typings, you can delete the dummy `index.d.ts` file and use the official one as well.\n\nThis was a fun blog and I've been waiting for this for so long. Let's talk more about svelte and sapper and all things cool. HMU on twitter\n\n\n\\- [@mrsauravsahu on Twitter](https://twitter.com/mrsauravsahu)\n"},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

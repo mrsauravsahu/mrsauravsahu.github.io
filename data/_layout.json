@@ -1,0 +1,26 @@
+{
+    "nav": {
+        "primary": {
+            "label": "ss",
+            "path": "/#",
+            "preFetch": false
+        },
+        "secondary": [
+            {
+                "label": "blog",
+                "path": "/blog",
+                "preFetch": false
+            },
+            {
+                "label": "contact",
+                "path": "/contact",
+                "preFetch": false
+            },
+            {
+                "label": "links",
+                "path": "/links",
+                "preFetch": false
+            }
+        ]
+    }
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>CI for monorepos? · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">CI for monorepos?</h1> <p class="post-meta svelte-u7gps3">Saturday, July 11 2020 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> less than a minute read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>Just realized I've created new problems that didn't even exist while trying to simplifying things. Case in point, CI for a monorepo. The <a href="https://github.com/mrsauravsahu/mrsauravsahu.github.io">portfolio</a> repository uses a mono-repo. Before that, it was just a front end component kit and a static site with sapper. But now that I have the monorepo setup (a new blogs repo) how do I manage the deployment process? I don't want to deploy to Github Pages just because I added a new API in my blogs project. Maybe I need to check in my CI process which projects' files got changed and trigger a corresponding CD? But that's just too much, right?</p><p>After looking around for a while, turns out that's one of the ways you'd do things. But if I were using something like Docker Swarm or Kubernetes for container-based deployments, this problem would still be there. Maybe this would be an optimization, but atleast new images would still built for each of the services, right?</p><p>Need to research on this more.</p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:36,title:"CI for monorepos?",description:"How does one go about doing CI-CD for monorepos. Just checking how I should manage CI in this portfolio project without creating unnecessary complications...",createdAt:"2020-07-11T14:50:00.000Z",approxTimeToRead:"PT0S",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"36",blogContent:"Just realized I've created new problems that didn't even exist while trying to simplifying things. Case in point, CI for a monorepo. The [portfolio](https://github.com/mrsauravsahu/mrsauravsahu.github.io) repository uses a mono-repo. Before that, it was just a front end component kit and a static site with sapper. But now that I have the monorepo setup (a new blogs repo) how do I manage the deployment process? I don't want to deploy to Github Pages just because I added a new API in my blogs project. Maybe I need to check in my CI process which projects' files got changed and trigger a corresponding CD? But that's just too much, right?\n\nAfter looking around for a while, turns out that's one of the ways you'd do things. But if I were using something like Docker Swarm or Kubernetes for container-based deployments, this problem would still be there. Maybe this would be an optimization, but atleast new images would still built for each of the services, right?\n\nNeed to research on this more.\n"},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

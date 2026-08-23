@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>A Nice Adventure · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">A Nice Adventure</h1> <p class="post-meta svelte-u7gps3">Friday, April 03 2015 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> 2 minutes read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>Prior to installing Ubuntu, I'd used only one OS, Windows. That's what everyone uses, really, for some reason. BTW, you CANNOT compare Windows, Ubuntu, Android, iOS, or Oxygen OS with each other. They're just made for different purposes. It makes my head hurt whenever I hear people comparing OSs.  </p><p>Okay, so, prior to using Ubuntu, I had Windows 8.1 on my PC and Laptop. I've been wanting to try out Windows 10 Technical Preview since quite a few weeks now. I had installed it in my Laptop inside of VirtualBox, but due to the lack of memory, it didn't run well.  </p><p>So, I thought of installing it alongside Windows 8.1 and Ubuntu on my Desktop. It's like, a, 7 year old Acer Aspire Series PC. A little specs sheet: 2GB RAM, 320 GB HDD, 1366 by 768 px resolution, Intel Core 2 Duo E7400 Processor and Intel G33/G31 Chipset Family GPU.  </p><p>I downloaded the ISOs from this link: <a href="https://windows.microsoft.com/en-us/windows/preview-iso-update-1503">Link to ISO</a>  </p><p><a href="https://mrsauravsahu.files.wordpress.com/2015/04/9939c-screenshot2b5.png"><img src="https://mrsauravsahu.files.wordpress.com/2015/04/9939c-screenshot2b5.png" alt=""></a></p><p>Installation is fairly easy. And I used a free partition that I had. I was playing around the Preview for a few hours. To be honest, it is really good. It is quite smooth for an early build. After that I restarted the computer to make sure I had all my data ( :P ) I booted into Windows 8.1 and it was all fine. Then I realized that Windows had replaced the GRUB menu with its own Windows Boot Manager. Only then I realized that I made a mistake (because I didn't know that it could be solved).  </p><p>After searching and reading around for a half hour, I came across this article in <a href="https://news.softpedia.com/news/How-to-Dual-Boot-Ubuntu-and-Windows-Properly-415377.shtml">SoftPedia</a>. SoftPedia always has these kind of great articles. So, they said that when you install Windows after you've installed Ubuntu, Windows replaces GRUB with the Windows boot manager. Because it doesn't want to recognize other Operating Systems (We'll come back to this later ;) )  </p><p>They suggested to reinstall GRUB. And to do that you have to boot into Live Ubuntu using a DVD or a Pen Drive. Then you can type in the following into the command line:  </p><p><strong>sudo add-apt-repository ppa:yannubuntu/boot-repair &amp;&amp; sudo apt-get update</strong><br>  
+<strong>sudo apt-get install -y boot-repair &amp;&amp; (boot-repair &amp;)</strong>  </p><p>This will add a repository where the Boot Repair app is and install it. Now we just have to use the recommended Repair and it will install GRUB into /dev/sda.<br>  
+And another problem solved.  </p><p>After this I thought everything would work just fine. But unfortunately, it isn't. I couldn't find Windows 10 Technical Preview anywhere in the GRUB menu. This will be the next problem I'll try and fix.  </p><p>Also, I will start with Computer Networking Concepts from the next post.  </p><p>Later.</p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:6,title:"A Nice Adventure",description:"Let's see what I've been doing... Oh, and my windows isn't working 😂",createdAt:"2015-04-03T00:01:00.000Z",approxTimeToRead:"PT2M",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"6",blogContent:"  \nPrior to installing Ubuntu, I'd used only one OS, Windows. That's what everyone uses, really, for some reason. BTW, you CANNOT compare Windows, Ubuntu, Android, iOS, or Oxygen OS with each other. They're just made for different purposes. It makes my head hurt whenever I hear people comparing OSs.  \n  \nOkay, so, prior to using Ubuntu, I had Windows 8.1 on my PC and Laptop. I've been wanting to try out Windows 10 Technical Preview since quite a few weeks now. I had installed it in my Laptop inside of VirtualBox, but due to the lack of memory, it didn't run well.  \n  \nSo, I thought of installing it alongside Windows 8.1 and Ubuntu on my Desktop. It's like, a, 7 year old Acer Aspire Series PC. A little specs sheet: 2GB RAM, 320 GB HDD, 1366 by 768 px resolution, Intel Core 2 Duo E7400 Processor and Intel G33/G31 Chipset Family GPU.  \n  \nI downloaded the ISOs from this link: [Link to ISO](https://windows.microsoft.com/en-us/windows/preview-iso-update-1503)  \n  \n\n[![](https://mrsauravsahu.files.wordpress.com/2015/04/9939c-screenshot2b5.png)](https://mrsauravsahu.files.wordpress.com/2015/04/9939c-screenshot2b5.png)\n\n  \n  \nInstallation is fairly easy. And I used a free partition that I had. I was playing around the Preview for a few hours. To be honest, it is really good. It is quite smooth for an early build. After that I restarted the computer to make sure I had all my data ( :P ) I booted into Windows 8.1 and it was all fine. Then I realized that Windows had replaced the GRUB menu with its own Windows Boot Manager. Only then I realized that I made a mistake (because I didn't know that it could be solved).  \n  \nAfter searching and reading around for a half hour, I came across this article in [SoftPedia](https://news.softpedia.com/news/How-to-Dual-Boot-Ubuntu-and-Windows-Properly-415377.shtml). SoftPedia always has these kind of great articles. So, they said that when you install Windows after you've installed Ubuntu, Windows replaces GRUB with the Windows boot manager. Because it doesn't want to recognize other Operating Systems (We'll come back to this later ;) )  \n  \nThey suggested to reinstall GRUB. And to do that you have to boot into Live Ubuntu using a DVD or a Pen Drive. Then you can type in the following into the command line:  \n  \n**sudo add-apt-repository ppa:yannubuntu/boot-repair && sudo apt-get update**  \n**sudo apt-get install -y boot-repair && (boot-repair &)**  \n  \nThis will add a repository where the Boot Repair app is and install it. Now we just have to use the recommended Repair and it will install GRUB into /dev/sda.  \nAnd another problem solved.  \n  \nAfter this I thought everything would work just fine. But unfortunately, it isn't. I couldn't find Windows 10 Technical Preview anywhere in the GRUB menu. This will be the next problem I'll try and fix.  \n  \nAlso, I will start with Computer Networking Concepts from the next post.  \n  \nLater."},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

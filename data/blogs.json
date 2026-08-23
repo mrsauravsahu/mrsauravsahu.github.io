@@ -1,0 +1,22 @@
+{
+    "posts": [
+        {
+            "title": "First!",
+            "slugSuffix": "first",
+            "createdOn": "2020-05-21",
+            "line": "My first ever post? This is a new beginning. Just testing... 1. 2. 3..."
+        },
+        {
+            "title": "CI for monorepos?",
+            "slugSuffix": "monorepo-ci",
+            "createdOn": "2020-07-11",
+            "line": "How does one go about doing CI-CD for monorepos. Just checking how I should manage CI in this portfolio project without creating unnecessary complications..."
+        },
+        {
+            "title": "Adonis V5: Writing your first custom provider!",
+            "slugSuffix": "adonis-v5-provider",
+            "createdOn": "2020-07-12",
+            "line": "From the past couple of days, I've been working with Adonis V5. In fact, this site's API is being written with Adonis V5. It's a really cool and feature-packed Framework for node..."
+        }
+    ]
+}

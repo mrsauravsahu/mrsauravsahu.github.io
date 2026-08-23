@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>Software Versioning - An Introduction with GitVersion · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">Software Versioning - An Introduction with GitVersion</h1> <p class="post-meta svelte-u7gps3">Sunday, July 25 2021 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> 6 minutes read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>Writing code is great, creating something new is exciting and it getting utilised by others is the best. But the most difficult part is maintaining this code. </p><p>Even though maintenance has many parts to it, in this blog, let’s discuss about versioning. </p><h2 id="an-introduction-to-software-versioning">An Introduction to Software Versioning</h2><h3 id="what-is-software-versioning">What is software versioning?</h3><p>Software versioning in a nutshell is just tagging your library with a meaningful version number to make sure that the consumers of your library are aware of the feature set available to them. </p><h3 id="do-i-need-versioning">Do I need versioning?</h3><p>Well, it is not mandated but versioning can have a lot of benefits. While working with simpler projects, versioning might not be an issue but when working in a team, good versioning will align with timelines. Other pros include — </p><ul><li>It gives a clear picture of what changes are happening with new releases. </li><li>It is easier to backtrack if new changes have severe issues and bugs. </li><li>Versioning provides a way of documentation. </li></ul><p>I’m sure there are many more pros of versioning. Feel free to add them in the comments. </p><h3 id="the-simplest-versioning-scheme">The simplest versioning scheme</h3><p>Let’s see if there are issues with versioning now? Well, for starters, doing good versioning is difficult. The simplest versioning scheme would be just incrementing a number — v1, v2 etc. this captures changes fairly well and can be used for small projects. It is a good starting point. </p><p>However, this scheme doesn’t make it clear, the type of changes going in any new version. So we need a more “semantic” versioning scheme. Enter, the <strong><a href="https://semver.org/">Semantic Versioning 2.0.0 Spec</a>.</strong> Semantic Versioning or “semver” for short, gives a great documented way of documenting. The gist of which is —</p><!-- HTML_TAG_START --><img class='half' src='/store/49-software-versioning-an-intro-with-gitversion/images/semver-summary.jpeg' alt='semver summary from semver.org'>
+
+<!-- HTML_TAG_END --><h3 id="how-can-i-setup-semver-for-my-project">How can I setup semver for my project?</h3><p>Well, semver is a specification, so following it manually is a good way to start. You can just make sure that your git tags or release branch names follow the right format and add the change-logs in the commit message. </p><h2 id="gitversion--a-more-automated-approach-to-versioning">GitVersion — A more automated approach to versioning</h2><p>One of the best ways to automate versioning is with <a href="https://gitversion.net/">GitVersion</a>. GitVersion is a tool to help with versioning through your git history and commit messages.</p><blockquote><p>Note: All code related to this blog is available here — <a href="https://github.com/mrsauravsahu/blog-semver">blog-semver@github</a>. Over the next few weeks, I'll be working on improving it so you can always find the latest code here.</p></blockquote><h3 id="my-git-workflow-setup">My git workflow setup</h3><p>For my projects, I use a simplified version of GitFlow — read more about it <a href="https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow">here</a>. But the gist of it is this —</p><ul><li>My main work happens on the <code>develop</code> branch. This is where I merge all my changes. If I need to distribute my app, I retain stable releases on the <code>master</code> branch. </li><li>I branch out all my feature branches from <code>develop</code> </li><li><code>hotfixes</code> are created directly from <code>master</code> and fixed and merged back. And pulled into <code>develop</code> as well. </li></ul><h3 id="lets-setup-gitversion">Let's setup GitVersion</h3><p>For this example, I have a node project. For node projects, the version of the app is present in the <code>package.json</code> and <code>package-lock.json</code> files — in the <code>"version"</code> property.</p><pre class="json"><code>{
+  "name": "blog-semver",
+  "version": "0.1.0",
+  "description": "setting up semver for your projects with Github Actions",
+
+  ...
+
+}</code></pre><p>Now, let's setup GitVersion. You can install GitVersion with one of these methods - <a href="https://gitversion.net/docs/usage/cli/installation">https://gitversion.net/docs/usage/cli/installation</a>. Once you have GitVersion installed, let's create a gitversion.yml config. You can use <code>$ gitversion init</code> to create this file. I have a simple config, which looks like —</p><pre class="yaml"><code>branches: {}
+ignore:
+  sha: []
+merge-message-formats: {}</code></pre><p>With the defaults, a PR merge to develop will bump the version with a minor change. So, the first version is <code>0.1.0</code>, then <code>0.2.0</code> and so on...</p><p>Now if you inspect the <a href="https://github.com/mrsauravsahu/blog-semver/blob/main/.github/workflows/ci.yml">CI Github Actions YML File</a>, you see this stage which calculates the next version with GitVersion. </p><pre class="yaml"><code>- name: install gitversion
+    uses: gittools/actions/gitversion/setup@v0.9.7
+    with:
+    versionSpec: '5.x'
+
+- name: execute gitversion
+  id: gitversion
+  uses: gittools/actions/gitversion/execute@v0.9.7
+  with:
+    useConfigFile: true
+    configFilePath: gitversion.yml</code></pre><blockquote><p>Note: As I mentioned, GitVersion uses git history to calculate the next version, so you'll have to modify your checkout step as well.</p></blockquote><pre class="yaml"><code>- name: checkout to branch
+  uses: actions/checkout@v2
+  with:
+    fetch-depth: 0 # &lt;--- get the entire history</code></pre><p>GitVersion spits out more detailed version values, but I stick to the <code>MajorMinorPatch</code> field. Here's what the rest of the fields look like —</p><pre class="json"><code>{
+  "Major": 1,
+  "Minor": 0,
+  "Patch": 0,
+  "PreReleaseTag": "alpha.4",
+  "PreReleaseTagWithDash": "-alpha.4",
+  "PreReleaseLabel": "alpha",
+  "PreReleaseLabelWithDash": "-alpha",
+  "PreReleaseNumber": 4,
+  "WeightedPreReleaseNumber": 4,
+  "BuildMetaData": null,
+  "BuildMetaDataPadded": "",
+  "FullBuildMetaData": "Branch.develop.Sha.801d0ae8327c24b387690dcd7c0838107e6f5260",
+  "MajorMinorPatch": "1.0.0",
+  "SemVer": "1.0.0-alpha.4",
+  "LegacySemVer": "1.0.0-alpha4",
+  "LegacySemVerPadded": "1.0.0-alpha0004",
+  "AssemblySemVer": "1.0.0.0",
+  "AssemblySemFileVer": "1.0.0.0",
+  "FullSemVer": "1.0.0-alpha.4",
+  "InformationalVersion": "1.0.0-alpha.4+Branch.develop.Sha.801d0ae8327c24b387690dcd7c0838107e6f5260",
+  "BranchName": "develop",
+  "EscapedBranchName": "develop",
+  "Sha": "801d0ae8327c24b387690dcd7c0838107e6f5260",
+  "ShortSha": "801d0ae",
+  "NuGetVersionV2": "1.0.0-alpha0004",
+  "NuGetVersion": "1.0.0-alpha0004",
+  "NuGetPreReleaseTagV2": "alpha0004",
+  "NuGetPreReleaseTag": "alpha0004",
+  "VersionSourceSha": "5ba4cd98ab31085a2e8057e2d00738bdc0118031",
+  "CommitsSinceVersionSource": 4,
+  "CommitsSinceVersionSourcePadded": "0004",
+  "UncommittedChanges": 0,
+  "CommitDate": "2021-07-24"
+}</code></pre><p>I'm currently working on a new step in Github Actions which writes this new version into the <code>package.json</code> and <code>package-lock.json</code> files and makes a commit, freezing the version into the source code. So, the commit history looks like this —</p><!-- HTML_TAG_START --><img src='/store/49-software-versioning-an-intro-with-gitversion/images/gitversion-in-github-actions.png' alt='gitversion in github actions'>
+
+<!-- HTML_TAG_END --><p>Here's the current Github Actions step which auto commits the version file changes. Note: I'm still actively working on this Github Action, so expect some changes there. 😉 Also, if you notice the <code>package.json</code> and <code>package-lock.json</code> files, the formatting is a little weird. I'm still working on that. 😂</p><pre class="yaml"><code>- name: write version to project
+  run: |
+    NEXT_VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}
+    echo "NEXT_VERSION=v$NEXT_VERSION"
+    git checkout ${GITHUB_HEAD_REF#refs/heads/} &amp;&amp; git pull origin ${GITHUB_HEAD_REF#refs/heads/} 
+    
+    FILE=./package.json
+    MODIFIED_FILE_CONTENTS=`node -e "const data = require('$FILE'); let modifiedData = { ...data, version: '$NEXT_VERSION' }; console.log(JSON.stringify(modifiedData, undefined, 2))"`
+    echo $MODIFIED_FILE_CONTENTS > $FILE
+    FILE=./package-lock.json
+    MODIFIED_FILE_CONTENTS=`node -e "const data = require('$FILE'); let modifiedData = { ...data, version: '$NEXT_VERSION' }; console.log(JSON.stringify(modifiedData, undefined, 2))"`
+    echo $MODIFIED_FILE_CONTENTS > $FILE
+    
+    git config --global user.name "Github Actions" &amp;&amp; git config --global user.email "noreply@github.com"
+    git add package* 
+    {
+      git commit -m "[skip ci] bump version to $NEXT_VERSION" &amp;&amp;
+      git push origin ${GITHUB_HEAD_REF#refs/heads/}
+      echo finished writing new version
+    } || {
+      echo no new version detected
+    }</code></pre><h3 id="how-do-i-bump-my-version">How do I bump my version?</h3><p>So, if you see with each PR, the minor version gets bumped by default. But what if you're not making a minor change? What if it is just a patch? Well, because GitVersion respects commit messages, you can create an empty commit with the message <code>+semver: patch</code> to bump the patch version.</p><p>Here's the message for other types of version changes —</p><pre class="yaml"><code>major-version-bump-message: '\+semver:\s?(breaking|major)'
+minor-version-bump-message: '\+semver:\s?(feature|minor)'
+patch-version-bump-message: '\+semver:\s?(fix|patch)'
+no-bump-message: '\+semver:\s?(none|skip)'</code></pre><p>If you want to bump from <code>0.x.x</code> to <code>1.0.0</code>, a <code>+semver: major</code> message doesn't work. Found this the hard way, but you need to set the <code>next-version: 1.0.0</code> field in the <code>gitversion.yml</code> file. This <a href="https://github.com/mrsauravsahu/blog-semver/pull/6/commits/1c4f3b0a67516e360021047f1e1726bf304b0d03">commit</a> — shows the same. This is only when the next-version is less than <code>1.0.0</code>, <code>+semver: major</code> should work after that.</p><p>So, that is an introduction to versioning and how to implement it with GitVersion and Github Actions. Happy coding!</p><p>— Saurav</p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:49,title:"Software Versioning - An Introduction with GitVersion",description:"Software Versioning is something we all must do. Let's checkout the basics, and also, GitVersion.",createdAt:"2021-07-25T11:20:52.000Z",approxTimeToRead:"PT6M",coverImageUrl:"https://images.unsplash.com/photo-1619369464529-fb194de62e9b"},blogId:"49",blogContent:"Writing code is great, creating something new is exciting and it getting utilised by others is the best. But the most difficult part is maintaining this code. \n\nEven though maintenance has many parts to it, in this blog, let’s discuss about versioning. \n\n## An Introduction to Software Versioning\n\n### What is software versioning?\n\nSoftware versioning in a nutshell is just tagging your library with a meaningful version number to make sure that the consumers of your library are aware of the feature set available to them. \n\n### Do I need versioning?\n\nWell, it is not mandated but versioning can have a lot of benefits. While working with simpler projects, versioning might not be an issue but when working in a team, good versioning will align with timelines. Other pros include — \n\n- It gives a clear picture of what changes are happening with new releases.\n- It is easier to backtrack if new changes have severe issues and bugs.\n- Versioning provides a way of documentation.\n\nI’m sure there are many more pros of versioning. Feel free to add them in the comments. \n\n### The simplest versioning scheme\n\nLet’s see if there are issues with versioning now? Well, for starters, doing good versioning is difficult. The simplest versioning scheme would be just incrementing a number — v1, v2 etc. this captures changes fairly well and can be used for small projects. It is a good starting point. \n\nHowever, this scheme doesn’t make it clear, the type of changes going in any new version. So we need a more “semantic” versioning scheme. Enter, the **[Semantic Versioning 2.0.0 Spec](https://semver.org/).** Semantic Versioning or “semver” for short, gives a great documented way of documenting. The gist of which is —\n\n\u003Cimg class='half' src='/store/49-software-versioning-an-intro-with-gitversion/images/semver-summary.jpeg' alt='semver summary from semver.org'>\n\n### How can I setup semver for my project?\n\nWell, semver is a specification, so following it manually is a good way to start. You can just make sure that your git tags or release branch names follow the right format and add the change-logs in the commit message. \n\n## GitVersion — A more automated approach to versioning\n\nOne of the best ways to automate versioning is with [GitVersion](https://gitversion.net/). GitVersion is a tool to help with versioning through your git history and commit messages.\n\n> Note: All code related to this blog is available here — [blog-semver@github](https://github.com/mrsauravsahu/blog-semver). Over the next few weeks, I'll be working on improving it so you can always find the latest code here.\n\n### My git workflow setup\n\nFor my projects, I use a simplified version of GitFlow — read more about it [here](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow). But the gist of it is this —\n\n- My main work happens on the `develop` branch. This is where I merge all my changes. If I need to distribute my app, I retain stable releases on the `master` branch.\n- I branch out all my feature branches from `develop`\n- `hotfixes` are created directly from `master` and fixed and merged back. And pulled into `develop` as well.\n\n### Let's setup GitVersion\n\nFor this example, I have a node project. For node projects, the version of the app is present in the `package.json` and `package-lock.json` files — in the `\"version\"` property.\n\n```json\n{\n  \"name\": \"blog-semver\",\n  \"version\": \"0.1.0\",\n  \"description\": \"setting up semver for your projects with Github Actions\",\n\n  ...\n\n}\n```\n\nNow, let's setup GitVersion. You can install GitVersion with one of these methods - [https://gitversion.net/docs/usage/cli/installation](https://gitversion.net/docs/usage/cli/installation). Once you have GitVersion installed, let's create a gitversion.yml config. You can use `$ gitversion init` to create this file. I have a simple config, which looks like —\n\n```yaml\nbranches: {}\nignore:\n  sha: []\nmerge-message-formats: {}\n```\n\nWith the defaults, a PR merge to develop will bump the version with a minor change. So, the first version is `0.1.0`, then `0.2.0` and so on...\n\nNow if you inspect the [CI Github Actions YML File](https://github.com/mrsauravsahu/blog-semver/blob/main/.github/workflows/ci.yml), you see this stage which calculates the next version with GitVersion. \n\n```yaml\n- name: install gitversion\n\tuses: gittools/actions/gitversion/setup@v0.9.7\n    with:\n    versionSpec: '5.x'\n\n- name: execute gitversion\n  id: gitversion\n  uses: gittools/actions/gitversion/execute@v0.9.7\n  with:\n    useConfigFile: true\n    configFilePath: gitversion.yml\n```\n\n> Note: As I mentioned, GitVersion uses git history to calculate the next version, so you'll have to modify your checkout step as well.\n\n```yaml\n- name: checkout to branch\n  uses: actions/checkout@v2\n  with:\n    fetch-depth: 0 # \u003C--- get the entire history\n```\n\nGitVersion spits out more detailed version values, but I stick to the `MajorMinorPatch` field. Here's what the rest of the fields look like —\n\n```json\n{\n  \"Major\": 1,\n  \"Minor\": 0,\n  \"Patch\": 0,\n  \"PreReleaseTag\": \"alpha.4\",\n  \"PreReleaseTagWithDash\": \"-alpha.4\",\n  \"PreReleaseLabel\": \"alpha\",\n  \"PreReleaseLabelWithDash\": \"-alpha\",\n  \"PreReleaseNumber\": 4,\n  \"WeightedPreReleaseNumber\": 4,\n  \"BuildMetaData\": null,\n  \"BuildMetaDataPadded\": \"\",\n  \"FullBuildMetaData\": \"Branch.develop.Sha.801d0ae8327c24b387690dcd7c0838107e6f5260\",\n  \"MajorMinorPatch\": \"1.0.0\",\n  \"SemVer\": \"1.0.0-alpha.4\",\n  \"LegacySemVer\": \"1.0.0-alpha4\",\n  \"LegacySemVerPadded\": \"1.0.0-alpha0004\",\n  \"AssemblySemVer\": \"1.0.0.0\",\n  \"AssemblySemFileVer\": \"1.0.0.0\",\n  \"FullSemVer\": \"1.0.0-alpha.4\",\n  \"InformationalVersion\": \"1.0.0-alpha.4+Branch.develop.Sha.801d0ae8327c24b387690dcd7c0838107e6f5260\",\n  \"BranchName\": \"develop\",\n  \"EscapedBranchName\": \"develop\",\n  \"Sha\": \"801d0ae8327c24b387690dcd7c0838107e6f5260\",\n  \"ShortSha\": \"801d0ae\",\n  \"NuGetVersionV2\": \"1.0.0-alpha0004\",\n  \"NuGetVersion\": \"1.0.0-alpha0004\",\n  \"NuGetPreReleaseTagV2\": \"alpha0004\",\n  \"NuGetPreReleaseTag\": \"alpha0004\",\n  \"VersionSourceSha\": \"5ba4cd98ab31085a2e8057e2d00738bdc0118031\",\n  \"CommitsSinceVersionSource\": 4,\n  \"CommitsSinceVersionSourcePadded\": \"0004\",\n  \"UncommittedChanges\": 0,\n  \"CommitDate\": \"2021-07-24\"\n}\n```\n\nI'm currently working on a new step in Github Actions which writes this new version into the `package.json` and `package-lock.json` files and makes a commit, freezing the version into the source code. So, the commit history looks like this —\n\n\u003Cimg src='/store/49-software-versioning-an-intro-with-gitversion/images/gitversion-in-github-actions.png' alt='gitversion in github actions'>\n\nHere's the current Github Actions step which auto commits the version file changes. Note: I'm still actively working on this Github Action, so expect some changes there. 😉 Also, if you notice the `package.json` and `package-lock.json` files, the formatting is a little weird. I'm still working on that. 😂\n\n```yaml\n- name: write version to project\n  run: |\n    NEXT_VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}\n    echo \"NEXT_VERSION=v$NEXT_VERSION\"\n    git checkout ${GITHUB_HEAD_REF#refs/heads/} && git pull origin ${GITHUB_HEAD_REF#refs/heads/} \n    \n    FILE=./package.json\n    MODIFIED_FILE_CONTENTS=`node -e \"const data = require('$FILE'); let modifiedData = { ...data, version: '$NEXT_VERSION' }; console.log(JSON.stringify(modifiedData, undefined, 2))\"`\n    echo $MODIFIED_FILE_CONTENTS > $FILE\n    FILE=./package-lock.json\n    MODIFIED_FILE_CONTENTS=`node -e \"const data = require('$FILE'); let modifiedData = { ...data, version: '$NEXT_VERSION' }; console.log(JSON.stringify(modifiedData, undefined, 2))\"`\n    echo $MODIFIED_FILE_CONTENTS > $FILE\n    \n    git config --global user.name \"Github Actions\" && git config --global user.email \"noreply@github.com\"\n    git add package* \n    {\n      git commit -m \"[skip ci] bump version to $NEXT_VERSION\" &&\n      git push origin ${GITHUB_HEAD_REF#refs/heads/}\n      echo finished writing new version\n    } || {\n      echo no new version detected\n    }\n```\n\n### How do I bump my version?\n\nSo, if you see with each PR, the minor version gets bumped by default. But what if you're not making a minor change? What if it is just a patch? Well, because GitVersion respects commit messages, you can create an empty commit with the message `+semver: patch` to bump the patch version.\n\nHere's the message for other types of version changes —\n\n```yaml\nmajor-version-bump-message: '\\+semver:\\s?(breaking|major)'\nminor-version-bump-message: '\\+semver:\\s?(feature|minor)'\npatch-version-bump-message: '\\+semver:\\s?(fix|patch)'\nno-bump-message: '\\+semver:\\s?(none|skip)'\n```\n\nIf you want to bump from `0.x.x` to `1.0.0`, a `+semver: major` message doesn't work. Found this the hard way, but you need to set the `next-version: 1.0.0` field in the `gitversion.yml` file. This [commit](https://github.com/mrsauravsahu/blog-semver/pull/6/commits/1c4f3b0a67516e360021047f1e1726bf304b0d03) — shows the same. This is only when the next-version is less than `1.0.0`, `+semver: major` should work after that.\n\nSo, that is an introduction to versioning and how to implement it with GitVersion and Github Actions. Happy coding!\n\n— Saurav"},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

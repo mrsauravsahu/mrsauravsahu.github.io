@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>Documenting .env files for nodejs Projects · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">Documenting .env files for nodejs Projects</h1> <p class="post-meta svelte-u7gps3">Friday, May 14 2021 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> less than a minute read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>Note: There's a video version available where I actually build this project and deploy it to npmjs: <a href="https://youtu.be/4N1lwa6w6HA">https://youtu.be/4N1lwa6w6HA</a></p><p>Documentation of any sort looks like an overhead at the time, but pays off really well for projects that need to maintained for a long time, when teams change, when onboarding new members, and a whole lot others.</p><p>For nodejs projects, application configuration is usually read from <code>process.env</code> which in turn come from a place like ENVIRONMENT variables or a configuration file like <code>.env</code>. During development, this package <code>dotenv</code> is a great tool to set your environment variables.</p><h2 id="documentation-is-key">Documentation is Key</h2><p>For large projects with even larger teams, code base changes constantly and so does the configuration. So documentation is key to keep anyone who uses the code base later. </p><p>A typical <code>.env</code> file looks like this (it's a collection of key=value pairs)</p><pre class="env"><code># The Node environment
+NODE_ENV=development
+
+# Url to a third party service
+API_SERVICE_URL=https://mrsauravsahu.tech/posts/41/file</code></pre><p>Since the value could contain sensitive information, to document this, we should ideally omit the value from each key=value pair and add this template of sorts to source control, which look something like the example below:</p><pre class="env"><code># The Node environment
+NODE_ENV=
+
+# Url to a third party service
+API_SERVICE_URL=</code></pre><h2 id="what-did-i-build">What did I build?</h2><p>I created an npm package which generates these template <code>.env</code> files from the real .env file, called <a href="https://npmjs.com/gen-env-template">gen-env-template</a>.
+This is a dev-tool so you can install it as a devDependency.</p><pre class="bash"><code># Use your favorite package manager to install this. (You can use npx to run directly as well)
+npm i -D gen-env-template</code></pre><p>Now that we have the package, we can pass in the <code>.env</code> file we're using and path to the outfile file. For example, if this is our input file - </p><pre class="bash"><code>➜ cat .env     
+# The Node environment
+NODE_ENV=
+
+# Url to a third party service
+API_SERVICE_URL=</code></pre><p>We can generate our template file with this command </p><pre class="bash"><code>➜ ./node_modules/.bin/gen-env-template .env template.env</code></pre><p>Now we get the generated template file </p><pre class="bash"><code>➜ cat template.env 
+# The Node environment
+NODE_ENV=
+
+# Url to a third party service
+API_SERVICE_URL=</code></pre><p>Now, this <code>template.env</code> file can be safely committed to source control as all secrets have been omitted. You can the Github repository for this project here - <a href="https://github.com/mrsauravsahu/gen-env-template">mrsauravsahu/gen-env-template on Github</a></p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:44,title:"Documenting .env files for nodejs Projects",description:"Created an npm package to generate template files for documentation",createdAt:"2021-05-14T18:37:04.000Z",approxTimeToRead:"PT1M",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"44",blogContent:"Note: There's a video version available where I actually build this project and deploy it to npmjs: https://youtu.be/4N1lwa6w6HA\n\nDocumentation of any sort looks like an overhead at the time, but pays off really well for projects that need to maintained for a long time, when teams change, when onboarding new members, and a whole lot others.\n\nFor nodejs projects, application configuration is usually read from `process.env` which in turn come from a place like ENVIRONMENT variables or a configuration file like `.env`. During development, this package `dotenv` is a great tool to set your environment variables.\n\n## Documentation is Key\n\nFor large projects with even larger teams, code base changes constantly and so does the configuration. So documentation is key to keep anyone who uses the code base later. \n\nA typical `.env` file looks like this (it's a collection of key=value pairs)\n\n```env\n# The Node environment\nNODE_ENV=development\n\n# Url to a third party service\nAPI_SERVICE_URL=https://mrsauravsahu.tech/posts/41/file\n```\n\nSince the value could contain sensitive information, to document this, we should ideally omit the value from each key=value pair and add this template of sorts to source control, which look something like the example below:\n\n```env\n# The Node environment\nNODE_ENV=\n\n# Url to a third party service\nAPI_SERVICE_URL=\n```\n\n## What did I build?\n\nI created an npm package which generates these template `.env` files from the real .env file, called [gen-env-template](https://npmjs.com/gen-env-template).\nThis is a dev-tool so you can install it as a devDependency.\n\n```bash\n# Use your favorite package manager to install this. (You can use npx to run directly as well)\nnpm i -D gen-env-template\n```\n\nNow that we have the package, we can pass in the `.env` file we're using and path to the outfile file. For example, if this is our input file - \n\n```bash\n➜ cat .env     \n# The Node environment\nNODE_ENV=\n\n# Url to a third party service\nAPI_SERVICE_URL=\n```\n\nWe can generate our template file with this command \n```bash\n➜ ./node_modules/.bin/gen-env-template .env template.env\n```\n\nNow we get the generated template file \n```bash\n➜ cat template.env \n# The Node environment\nNODE_ENV=\n\n# Url to a third party service\nAPI_SERVICE_URL=\n```\n\nNow, this `template.env` file can be safely committed to source control as all secrets have been omitted. You can the Github repository for this project here - [mrsauravsahu/gen-env-template on Github](https://github.com/mrsauravsahu/gen-env-template)\n"},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

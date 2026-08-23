@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>Adonis V5: Writing your first custom provider! · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">Adonis V5: Writing your first custom provider!</h1> <p class="post-meta svelte-u7gps3">Monday, July 13 2020 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> 4 minutes read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>From the past couple of days, I've been working with <a href="https://preview.adonisjs.com">Adonis V5</a>. In fact, this site's API is being written with Adonis V5. It's a really cool and feature-packed Framework for node. </p><!-- HTML_TAG_START --><!--
+## TLDR
+just go <a href="#tldr">here</a> 😴
+-->
+
+<!-- HTML_TAG_END --><p>Well, if you're reading this, there's a high likelyhood that you're pretty familiar with Adonis. Let's look at how to create a custom provider in Adonis V5. Throughout this post, I'll use this blogs API as an example, all the code for which is available here: <a href="https://github.com/mrsauravsahu/mrsauravsahu.github.io">mrsauravsahu.github.io on Github</a>. </p><p>So, for storing the actual blog files into a storage service, I'm using the temporary app directory. There's a <code>POST /blog-posts</code> API that takes a markdown file and writes it to the tmp directory, the basic implementation of which is here:</p><pre class="javascript"><code>...
+public async upload({ request }: HttpContextContract) {
+    const file = request.file('file');
+
+    // generate a unique id for the file name
+    const fileId = uuid();
+    const filePath = `uploads/blog-posts/${fileId}.md`;
+
+    // save to tmp directory
+    await file?.move(Application.tmpPath(), { name:filePath })
+
+    const blogPostToAdd: Partial&lt;BlogPost> = {
+        file: filePath,
+        extension: 'md'
+    };
+
+    // add to db
+    const addedBlogPost = await BlogPost.create(blogPostToAdd)
+
+    return {
+        data: addedBlogPost
+    }
+}
+...</code></pre><p>As I'm writing this, just realised the above move operation should ideally be done by the <code>TmpFileProvider</code> 🤔 (maybe I should refactor that later) well, back to the actual provider. Right, so in the download API - <code>GET /blog-posts/:id/file</code> we need to get the buffer back from the File System.</p><p><!-- HTML_TAG_START --><a name="tldr"><!-- HTML_TAG_END --><!-- HTML_TAG_START --></a><!-- HTML_TAG_END --></p><h2 id="steps-to-create-a-custom-provider-in-adonis-v5">Steps to create a custom provider in Adonis V5</h2><ol start="1"><li>Create your actual implementation, keeping one thing in mind - ❌ no external dependencies. So, for our example, it's as simple as the code below. (Follow TDD, I didn't this time, but don't tell anybody 🤫) </li></ol><pre class="javascript"><code>import { FileServiceConfig } from "Contracts/service.file-service";
+import * as fs from 'fs';
+import { promisify } from 'util';
+import { join } from 'path';
+
+export class FileService {
+  private config: FileServiceConfig;
+
+  constructor(config: FileServiceConfig) {
+    this.config = config;
+  }
+
+  async getBufferAsync(filePath: string): Promise&lt;Buffer> {
+    const fullFilePath = join(this.config.basePath, filePath);
+    const buffer = await promisify(fs.readFile)(fullFilePath);
+    return buffer;
+  }
+}</code></pre><ol start="2"><li>Create your provider
+Use the ace command <code>node ace make:provider TmpFileProvider</code> to create your provider. It should add the actual file and an entry in the providers section of the <code>.adonisrc.json</code> file. </li><li>Setup your implementation in the register section of the provider. My service looks like it can be a singleton, so decided based on your needs. The provider now looks like this: </li></ol><pre class="javascript"><code>export default class TmpFileProvider {
+  constructor (protected container: IocContract) {
+  }
+
+  public register () {
+    // You should be getting the config from the config file
+    // but for this, let's keep this simple
+    this.container.singleton('providers/TmpFileProvider', () => {
+      const config: FileServiceConfig = { basePath: Application.tmpPath() }
+      return new FileService(config);
+    })
+  }
+
+  public async boot () {
+    // All bindings are ready, feel free to use them
+  }
+
+  public async ready () {
+    // App is ready
+  }
+
+  public async shutdown () {
+    // Cleanup, since app is going down
+  }
+}</code></pre><ol start="4"><li>Now when you use it in your controller, like so: </li></ol><pre class="javascript"><code>...
+public async download({ params, response }: HttpContextContract) {
+    // TODO: Clean this lel
+    const blogPostId: number = params.id;
+    const blogPost = await BlogPost.find(blogPostId);
+    // TODO: Use request validation for this
+    if (!blogPost) throw new Error('cannot find file');
+    const file = await TmpFileProvider.getBufferAsync(blogPost.file);
+
+    response.status(200);
+    response.type('application/octet-stream');
+    response.send(file);
+}
+...</code></pre><ol start="5"><li>Now when you start your server (or more likely try and hit the API multiple times thinking why it's not working) you'll get this error: </li></ol><pre class="zsh"><code>app/Controllers/Http/BlogPostsController.ts:5:29 - error TS2307: Cannot find module '@ioc:providers/TmpFileProvider' or its corresponding type declarations.
+
+import TmpFileProvider from '@ioc:providers/TmpFileProvider';
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ℹ  info      re-starting http server</code></pre><p>We need to add a type declaration telling TypeScript what that provider is returning, which is as simple as this:</p><pre class="javascript"><code>
+declare module '@ioc:providers/TmpFileProvider' {
+  import { FileService } from "App/Services/FileService";
+
+  const TmpFileProvider: FileService
+  export default TmpFileProvider
+}
+</code></pre><p>You're good to go!!! ❤️</p><p>I'm having a lot of fun learning Adonis V5. If you love it too, let's connect on Twitter, or let's do it regardless. 🤷‍♂️</p><p> <a href="https://twitter.com/mrsauravsahu">@mrsauravsahu on Twitter</a></p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:37,title:"Adonis V5: Writing your first custom provider!",description:"From the past couple of days, I've been working with Adonis V5. In fact, this site's API is being written with Adonis V5. It's a really cool and feature-packed Framework for node...",createdAt:"2020-07-13T17:21:02.000Z",approxTimeToRead:"PT4M",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"37",blogContent:"From the past couple of days, I've been working with [Adonis V5](https://preview.adonisjs.com). In fact, this site's API is being written with Adonis V5. It's a really cool and feature-packed Framework for node. \n\n\u003C!--\n## TLDR\njust go \u003Ca href=\"#tldr\">here\u003C/a> 😴\n-->\n\nWell, if you're reading this, there's a high likelyhood that you're pretty familiar with Adonis. Let's look at how to create a custom provider in Adonis V5. Throughout this post, I'll use this blogs API as an example, all the code for which is available here: [mrsauravsahu.github.io on Github](https://github.com/mrsauravsahu/mrsauravsahu.github.io). \n\nSo, for storing the actual blog files into a storage service, I'm using the temporary app directory. There's a `POST /blog-posts` API that takes a markdown file and writes it to the tmp directory, the basic implementation of which is here:\n\n```javascript\n...\npublic async upload({ request }: HttpContextContract) {\n    const file = request.file('file');\n\n    // generate a unique id for the file name\n    const fileId = uuid();\n    const filePath = `uploads/blog-posts/${fileId}.md`;\n\n    // save to tmp directory\n    await file?.move(Application.tmpPath(), { name:filePath })\n\n    const blogPostToAdd: Partial\u003CBlogPost> = {\n        file: filePath,\n        extension: 'md'\n    };\n\n    // add to db\n    const addedBlogPost = await BlogPost.create(blogPostToAdd)\n\n    return {\n        data: addedBlogPost\n    }\n}\n...\n```\n\nAs I'm writing this, just realised the above move operation should ideally be done by the `TmpFileProvider` 🤔 (maybe I should refactor that later) well, back to the actual provider. Right, so in the download API - `GET /blog-posts/:id/file` we need to get the buffer back from the File System.\n\n\u003Ca name=\"tldr\">\u003C/a>\n## Steps to create a custom provider in Adonis V5\n\n1. Create your actual implementation, keeping one thing in mind - ❌ no external dependencies. So, for our example, it's as simple as the code below. (Follow TDD, I didn't this time, but don't tell anybody 🤫)\n\n```javascript\nimport { FileServiceConfig } from \"Contracts/service.file-service\";\nimport * as fs from 'fs';\nimport { promisify } from 'util';\nimport { join } from 'path';\n\nexport class FileService {\n  private config: FileServiceConfig;\n\n  constructor(config: FileServiceConfig) {\n    this.config = config;\n  }\n\n  async getBufferAsync(filePath: string): Promise\u003CBuffer> {\n    const fullFilePath = join(this.config.basePath, filePath);\n    const buffer = await promisify(fs.readFile)(fullFilePath);\n    return buffer;\n  }\n}\n```\n\n2. Create your provider\nUse the ace command `node ace make:provider TmpFileProvider` to create your provider. It should add the actual file and an entry in the providers section of the `.adonisrc.json` file.\n\n3. Setup your implementation in the register section of the provider. My service looks like it can be a singleton, so decided based on your needs. The provider now looks like this: \n\n```javascript\nexport default class TmpFileProvider {\n  constructor (protected container: IocContract) {\n  }\n\n  public register () {\n    // You should be getting the config from the config file\n    // but for this, let's keep this simple\n    this.container.singleton('providers/TmpFileProvider', () => {\n      const config: FileServiceConfig = { basePath: Application.tmpPath() }\n      return new FileService(config);\n    })\n  }\n\n  public async boot () {\n    // All bindings are ready, feel free to use them\n  }\n\n  public async ready () {\n    // App is ready\n  }\n\n  public async shutdown () {\n    // Cleanup, since app is going down\n  }\n}\n```\n\n4. Now when you use it in your controller, like so:\n\n```javascript\n...\npublic async download({ params, response }: HttpContextContract) {\n    // TODO: Clean this lel\n    const blogPostId: number = params.id;\n    const blogPost = await BlogPost.find(blogPostId);\n    // TODO: Use request validation for this\n    if (!blogPost) throw new Error('cannot find file');\n    const file = await TmpFileProvider.getBufferAsync(blogPost.file);\n\n    response.status(200);\n    response.type('application/octet-stream');\n    response.send(file);\n}\n...\n```\n\n5. Now when you start your server (or more likely try and hit the API multiple times thinking why it's not working) you'll get this error: \n\n```zsh\napp/Controllers/Http/BlogPostsController.ts:5:29 - error TS2307: Cannot find module '@ioc:providers/TmpFileProvider' or its corresponding type declarations.\n\nimport TmpFileProvider from '@ioc:providers/TmpFileProvider';\n                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\nℹ  info      re-starting http server\n```\n\nWe need to add a type declaration telling TypeScript what that provider is returning, which is as simple as this:\n```javascript\n\ndeclare module '@ioc:providers/TmpFileProvider' {\n  import { FileService } from \"App/Services/FileService\";\n\n  const TmpFileProvider: FileService\n  export default TmpFileProvider\n}\n\n```\n\nYou're good to go!!! ❤️\n\nI'm having a lot of fun learning Adonis V5. If you love it too, let's connect on Twitter, or let's do it regardless. 🤷‍♂️\n\n\\- [@mrsauravsahu on Twitter](https://twitter.com/mrsauravsahu)"},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

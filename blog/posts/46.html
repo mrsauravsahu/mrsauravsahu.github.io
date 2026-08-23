@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>Downsizing Docker Images (~20X Improvement) · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">Downsizing Docker Images (~20X Improvement)</h1> <p class="post-meta svelte-u7gps3">Friday, June 18 2021 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> 4 minutes read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>Docker is great, isn't it? It has solved so many problems and helps developers easily deploy applications without complex configuration. But it's also our responsibility to use it well. Docker images are basically templates that will create containers will which run our application - so it is important that we package our application which creates the most optimized and compact results. This is to ensure that our docker images can be used more effectively - deploying your image as a microservice? It's best to have light-weight services. Writing these docker images to a container registry? Save space and store the most optimized docker images.</p><blockquote><p>Note: Even though we're going to take a look at a sample nestjs application, this applies to any sort of application you're building.</p></blockquote><p>You can find the entire repository here and you can experiment with this. So, to give you a brief about the app, it's a basic hello API which has one route that returns some information about itself. If you run the app locally, with a <code>PORT=8080 npm start</code> you can see the response by sending a request to <code>GET /</code></p><p>Here's a sample response:</p><pre class="json"><code>{
+    "data": {
+        "app": "hello",
+        "version": "v0.0.1"
+    }
+}</code></pre><p>The first version of the application is ready, which will evolve overtime, let's say. So now we can move over to <code>"dockerizing"</code> this application. I'll write each version of the app against the operation we do. </p><p>To build the docker image, I'll be using this command </p><pre class="bash"><code>$ docker build -t hello:v0.0.1 -f dockerfile . # &lt;-- replace the version for each build</code></pre><p>Once you have created an image, you can run it with this docker run command</p><pre class="bash"><code>$ docker run -p 8080:80 hello:v0.0.1 # &lt;-- you can now hit http://localhost:8080/</code></pre><h2 id="v001---simple-and-straightforward">v0.0.1 - Simple and Straightforward</h2><p>So, first, let's write a very simple and straight forward dockerfile to create out image. You can see, we're just using the node's LTS tagged image to install our packages, building our project and running it. </p><pre class="docker"><code>FROM node:lts
+
+WORKDIR /app
+
+COPY package* . 
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+ENTRYPOINT node dist/src/main.js</code></pre><p>I've also symlinked the <code>.gitignore</code> to <code>.dockerignore</code> as we don't need those in our context.</p><pre class="docker"><code># compiled output
+/dist
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json</code></pre><p>So, right now, we end-up with an image whose size is 1.23GB, which is bad news for just a hello sort of app. By the way, you can check the size of your images with in the <code>docker images</code> command. </p><h2 id="v002---muliti-stage-builds">v0.0.2 - Muliti Stage Builds</h2><p>Here, we'll build and package our application in separate environments. This will fix a few things for us -</p><ul><li>the docker image will not container any <code>devDependency</code> </li><li>we can also choose to remove the test code or the source code entirely from the docker image </li></ul><p>For the final image, we're using alpine tags. alpine is a lightweight linux distro and great for docker images.</p><pre class="docker"><code>FROM node:14.17.1 as buildEnv
+
+WORKDIR /app
+
+COPY package* .
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+FROM node:14.17.1-alpine # &lt;-- real small images
+
+WORKDIR /app
+
+COPY --from=buildEnv /app/package* .
+
+RUN npm i --prod
+
+COPY --from=buildEnv /app/dist dist
+
+ENTRYPOINT node . # &lt;-- this works because of the 'main' property in package.json</code></pre><p>That was great! We have an image with a size of 130MB. That's great progress. But we can do better. How?</p><h2 id="v003---install-node-in-an-alpine-image">v0.0.3 - Install Node in an Alpine Image</h2><p>Rather than using node's alpine tagged docker image, we can create our own from alpine images. So what will be trimming off? Well, node's alpine tags still contain things like <code>npm</code>, which we really don't need at runtime. (Maybe your app does, so this might not work for you.)</p><pre class="docker"><code>FROM node:lts as buildEnv
+
+WORKDIR /app
+
+COPY package* .
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+FROM node:lts-alpine as finalCodeEnv
+
+WORKDIR /app
+
+COPY --from=buildEnv /app/package* .
+
+RUN npm i --prod
+
+COPY --from=buildEnv /app/dist dist
+
+FROM alpine 
+
+WORKDIR /app
+
+RUN apk add nodejs
+
+COPY --from=finalCodeEnv /app .
+
+ENTRYPOINT node .</code></pre><p>We've already reduced the image size from 1.23GB to 58.5MB - which is almost a twenty fold (<code>21.49X</code>) improvement, but can we go further? Since we've installed some packages with apk, maybe we can remove the cache to save some space. Let's add a new stage in our <code>dockerfile</code> to clear the apk cache. Let's give it a go!</p><h2 id="v004---clear-apk-cache">v0.0.4 - Clear APK Cache</h2><pre class="docker"><code>FROM node:lts as buildEnv
+
+WORKDIR /app
+
+COPY package* .
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+FROM node:lts-alpine as finalCodeEnv
+
+WORKDIR /app
+
+COPY --from=buildEnv /app/package* .
+
+RUN npm i --prod
+
+COPY --from=buildEnv /app/dist dist
+
+FROM alpine 
+
+WORKDIR /app
+
+RUN apk add nodejs &amp;&amp; rm -rf /var/cache/apk/* ## &lt;-- Clear APK Cache
+
+COPY --from=finalCodeEnv /app .
+
+ENTRYPOINT node .</code></pre><p>If you see the final image sizes, there's not much of a difference. After checking folder sizes inside the container, you can see our app is around 29MB. The next largest file is the <code>node</code> interpreter itself, around 30MB, so can't really do much about it. But, at the end of it all, it was a great exercise and now you can see how light-weight you can make nestjs, and nodejs images in general.</p><pre class="bash"><code>$ docker images --format "{{.ID}}\t{{.Size}}\t{{.Repository}}\t{{.Tag}}" | sort -k 4 | grep hello
+
+e3f7f026264d	1.23GB	hello	v0.0.1
+167438686d8f	130MB   hello	v0.0.2
+7f83291130fd	58.6MB	hello	v0.0.3
+ab3fc836943c	56.5MB	hello	v0.0.4</code></pre><p>So this was a guide as to how to downsize images when writing dockerfiles for your applications. Try this out with different sort of apps and languages. It's always fun to see how to creatively create optimized images. Enjoy! Happy coding!</p><p> <a href="https://twitter.com/mrsauravsahu">Saurav</a></p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:46,title:"Downsizing Docker Images (~20X Improvement)",description:"Let's see how to create smaller docker images for all your projects",createdAt:"2021-06-18T04:41:09.000Z",approxTimeToRead:"PT4M",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"46",blogContent:"Docker is great, isn't it? It has solved so many problems and helps developers easily deploy applications without complex configuration. But it's also our responsibility to use it well. Docker images are basically templates that will create containers will which run our application - so it is important that we package our application which creates the most optimized and compact results. This is to ensure that our docker images can be used more effectively - deploying your image as a microservice? It's best to have light-weight services. Writing these docker images to a container registry? Save space and store the most optimized docker images.\n\n> Note: Even though we're going to take a look at a sample nestjs application, this applies to any sort of application you're building.\n\nYou can find the entire repository here and you can experiment with this. So, to give you a brief about the app, it's a basic hello API which has one route that returns some information about itself. If you run the app locally, with a `PORT=8080 npm start` you can see the response by sending a request to `GET /`\n\nHere's a sample response:\n\n```json\n{\n    \"data\": {\n        \"app\": \"hello\",\n        \"version\": \"v0.0.1\"\n    }\n}\n```\n\nThe first version of the application is ready, which will evolve overtime, let's say. So now we can move over to `\"dockerizing\"` this application. I'll write each version of the app against the operation we do. \n\nTo build the docker image, I'll be using this command \n\n```bash\n$ docker build -t hello:v0.0.1 -f dockerfile . # \u003C-- replace the version for each build\n```\n\nOnce you have created an image, you can run it with this docker run command\n\n```bash\n$ docker run -p 8080:80 hello:v0.0.1 # \u003C-- you can now hit http://localhost:8080/\n```\n\n## v0.0.1 - Simple and Straightforward\n\nSo, first, let's write a very simple and straight forward dockerfile to create out image. You can see, we're just using the node's LTS tagged image to install our packages, building our project and running it. \n\n```docker\nFROM node:lts\n\nWORKDIR /app\n\nCOPY package* . \n\nRUN npm ci\n\nCOPY . .\n\nRUN npm run build\n\nENTRYPOINT node dist/src/main.js\n```\n\nI've also symlinked the `.gitignore` to `.dockerignore` as we don't need those in our context.\n\n```docker\n# compiled output\n/dist\n/node_modules\n\n# Logs\nlogs\n*.log\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\nlerna-debug.log*\n\n# OS\n.DS_Store\n\n# Tests\n/coverage\n/.nyc_output\n\n# IDEs and editors\n/.idea\n.project\n.classpath\n.c9/\n*.launch\n.settings/\n*.sublime-workspace\n\n# IDE - VSCode\n.vscode/*\n!.vscode/settings.json\n!.vscode/tasks.json\n!.vscode/launch.json\n!.vscode/extensions.json\n```\n\nSo, right now, we end-up with an image whose size is 1.23GB, which is bad news for just a hello sort of app. By the way, you can check the size of your images with in the `docker images` command. \n\n## v0.0.2 - Muliti Stage Builds\n\nHere, we'll build and package our application in separate environments. This will fix a few things for us -\n\n- the docker image will not container any `devDependency`\n- we can also choose to remove the test code or the source code entirely from the docker image\n\nFor the final image, we're using alpine tags. alpine is a lightweight linux distro and great for docker images.\n\n```docker\nFROM node:14.17.1 as buildEnv\n\nWORKDIR /app\n\nCOPY package* .\n\nRUN npm ci\n\nCOPY . .\n\nRUN npm run build\n\nFROM node:14.17.1-alpine # \u003C-- real small images\n\nWORKDIR /app\n\nCOPY --from=buildEnv /app/package* .\n\nRUN npm i --prod\n\nCOPY --from=buildEnv /app/dist dist\n\nENTRYPOINT node . # \u003C-- this works because of the 'main' property in package.json\n```\n\nThat was great! We have an image with a size of 130MB. That's great progress. But we can do better. How?\n\n## v0.0.3 - Install Node in an Alpine Image\n\nRather than using node's alpine tagged docker image, we can create our own from alpine images. So what will be trimming off? Well, node's alpine tags still contain things like `npm`, which we really don't need at runtime. (Maybe your app does, so this might not work for you.)\n\n```docker\nFROM node:lts as buildEnv\n\nWORKDIR /app\n\nCOPY package* .\n\nRUN npm ci\n\nCOPY . .\n\nRUN npm run build\n\nFROM node:lts-alpine as finalCodeEnv\n\nWORKDIR /app\n\nCOPY --from=buildEnv /app/package* .\n\nRUN npm i --prod\n\nCOPY --from=buildEnv /app/dist dist\n\nFROM alpine \n\nWORKDIR /app\n\nRUN apk add nodejs\n\nCOPY --from=finalCodeEnv /app .\n\nENTRYPOINT node .\n```\n\nWe've already reduced the image size from 1.23GB to 58.5MB - which is almost a twenty fold (`21.49X`) improvement, but can we go further? Since we've installed some packages with apk, maybe we can remove the cache to save some space. Let's add a new stage in our `dockerfile` to clear the apk cache. Let's give it a go!\n\n## v0.0.4 - Clear APK Cache\n\n```docker\nFROM node:lts as buildEnv\n\nWORKDIR /app\n\nCOPY package* .\n\nRUN npm ci\n\nCOPY . .\n\nRUN npm run build\n\nFROM node:lts-alpine as finalCodeEnv\n\nWORKDIR /app\n\nCOPY --from=buildEnv /app/package* .\n\nRUN npm i --prod\n\nCOPY --from=buildEnv /app/dist dist\n\nFROM alpine \n\nWORKDIR /app\n\nRUN apk add nodejs && rm -rf /var/cache/apk/* ## \u003C-- Clear APK Cache\n\nCOPY --from=finalCodeEnv /app .\n\nENTRYPOINT node .\n```\n\nIf you see the final image sizes, there's not much of a difference. After checking folder sizes inside the container, you can see our app is around 29MB. The next largest file is the `node` interpreter itself, around 30MB, so can't really do much about it. But, at the end of it all, it was a great exercise and now you can see how light-weight you can make nestjs, and nodejs images in general.\n\n```bash\n$ docker images --format \"{{.ID}}\\t{{.Size}}\\t{{.Repository}}\\t{{.Tag}}\" | sort -k 4 | grep hello\n\ne3f7f026264d\t1.23GB\thello\tv0.0.1\n167438686d8f\t130MB   hello\tv0.0.2\n7f83291130fd\t58.6MB\thello\tv0.0.3\nab3fc836943c\t56.5MB\thello\tv0.0.4\n```\n\nSo this was a guide as to how to downsize images when writing dockerfiles for your applications. Try this out with different sort of apps and languages. It's always fun to see how to creatively create optimized images. Enjoy! Happy coding!\n\n\\- [Saurav](https://twitter.com/mrsauravsahu)"},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

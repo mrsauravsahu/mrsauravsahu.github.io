@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="../../favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="../../_app/immutable/entry/start.8Dqr7wsf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BHbhsZyw.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BDpmjvUW.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BA628rsy.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.Dgwoo-Hd.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/_igUCoNE.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.KZz6h5sB.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/6.DJrX1sHs.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/Dsy1AHCi.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CZq5Ywvf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/BdyiJ4p3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CgU5AtxT.js" rel="modulepreload">
+		<title>The Timer Class · @mrsauravsahu</title><!-- HEAD_svelte-1xkvc4_START --><!-- HEAD_svelte-1xkvc4_END -->
+		<link href="../../_app/immutable/assets/0.CdgvbFYd.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/6.B0hnadWh.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">  <div class="progress-bar svelte-a9mn6x" style="width: 0%"></div> <nav class="svelte-h0657o"><a href="/" class="logo svelte-h0657o" data-svelte-h="svelte-804c09">SS</a> <button class="hamburger svelte-h0657o" aria-label="Menu" data-svelte-h="svelte-5gbbzg"><span class="svelte-h0657o"></span><span class="svelte-h0657o"></span></button> <ul class="links svelte-h0657o"><li><a href="/#writing" class="svelte-h0657o" data-svelte-h="svelte-bxaj5o">writing</a></li> <li><a href="/#beyond" class="svelte-h0657o" data-svelte-h="svelte-18ttiio">beyond</a></li> <li><a href="/blog/1" class="svelte-h0657o" data-svelte-h="svelte-1sonehn">all posts</a></li> <li><a href="/#contact" class="svelte-h0657o" data-svelte-h="svelte-1i36ryc">contact</a></li></ul> </nav> <main class="svelte-a9mn6x">  <article class="post-page settle svelte-u7gps3"><div class="post-inner svelte-u7gps3"><a href="/blog/1" class="back-link svelte-u7gps3" data-svelte-h="svelte-feip8c">← all posts</a> <header class="post-header svelte-u7gps3"><h1 class="post-title svelte-u7gps3">The Timer Class</h1> <p class="post-meta svelte-u7gps3">Thursday, May 05 2016 <span class="dot svelte-u7gps3" data-svelte-h="svelte-hv22td">·</span> less than a minute read</p> <div class="post-divider svelte-u7gps3"></div></header> <div class="post-body svelte-u7gps3"><p>This semester, according to our syllabus, we have the 'Design and Analysis of Algorithms' subject. The theory classes contain core algorithmic topics like divide - and - conquer, greedy technique and dynamic programming and in labs, we solve problems using said techniques. Typically, schools and colleges use Turbo C++, distributed by Borland, which we run under an emulated environment like DOSBOX because of  the deprecation of MS-DOS and surge of the Windows NT line of Operating Systems. However, we should clearly not ignore the alternatives out there. We still have to code the solution for the old Turbo C++ compiler from the 90s. I have created a repo on GitHub for solutions to the different problems in our syllabus (for MS-DOS, NT  - Visual C++ Compiler and Linux - g++) We are supposed to implement the given problem using the appropriate technique and we are to monitor the order of growth of said algorithm. In DOS, we use a Timer class that is present in the Template Class Library. By default, the include folder does not reference the Template Class Library, but this can be done pretty easily using the Settings Tab in Turbo C++. The problem is that the Timer class runs only on DOS, so clearly we need a simple Timer Class Implementation for Linux and Visual C++. I have gone and done just that. My implementation provides minimal functionality</p><ol start="1"><li>Starting a Timer </li><li>Stopping a Timer (Pause) </li><li>To Reset the Timer that makes it ready to use again </li><li>To return the time that passed between the function calls to start and stop </li></ol><p>The Visual C++ contains classes in the std::chrono namespace which I've used in my Timer implementation for Windows. For Linux, we use the ctime header file and the clock function. The link to the repository: <a href="https://github.com/sauravMSFT/Design-Analysis-Algorithms">https://github.com/sauravMSFT/Design-Analysis-Algorithms</a> In the next post, I'd like to talk about adding paths to the gcc and g++ environment variables on linux and maybe how to run gcc and g++ on Windows.</p></div> <div class="post-footer svelte-u7gps3"><div class="utterance-root svelte-yttj2i"><script src="https://utteranc.es/client.js" repo="mrsauravsahu/portfolio-comments" issue-term="title" theme="github-dark" crossorigin="anonymous" label="comments" async></script></div></div></div> </article> </main> 
+			
+			<script>
+				{
+					__sveltekit_u7swuv = {
+						base: new URL("../..", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.8Dqr7wsf.js"),
+						import("../../_app/immutable/entry/app.Dgwoo-Hd.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 6],
+							data: [null,{type:"data",data:{blog:{id:17,title:"The Timer Class",description:"Today I wrote some C++ ",createdAt:"2016-05-05T09:40:00.000Z",approxTimeToRead:"PT1M",coverImageUrl:"/store/48-my-personal-computing-setup/img.cover.jpeg"},blogId:"17",blogContent:"This semester, according to our syllabus, we have the 'Design and Analysis of Algorithms' subject. The theory classes contain core algorithmic topics like divide - and - conquer, greedy technique and dynamic programming and in labs, we solve problems using said techniques. Typically, schools and colleges use Turbo C++, distributed by Borland, which we run under an emulated environment like DOSBOX because of  the deprecation of MS-DOS and surge of the Windows NT line of Operating Systems. However, we should clearly not ignore the alternatives out there. We still have to code the solution for the old Turbo C++ compiler from the 90s. I have created a repo on GitHub for solutions to the different problems in our syllabus (for MS-DOS, NT  - Visual C++ Compiler and Linux - g++) We are supposed to implement the given problem using the appropriate technique and we are to monitor the order of growth of said algorithm. In DOS, we use a Timer class that is present in the Template Class Library. By default, the include folder does not reference the Template Class Library, but this can be done pretty easily using the Settings Tab in Turbo C++. The problem is that the Timer class runs only on DOS, so clearly we need a simple Timer Class Implementation for Linux and Visual C++. I have gone and done just that. My implementation provides minimal functionality\n\n1.  Starting a Timer\n2.  Stopping a Timer (Pause)\n3.  To Reset the Timer that makes it ready to use again\n4.  To return the time that passed between the function calls to start and stop\n\nThe Visual C++ contains classes in the std::chrono namespace which I've used in my Timer implementation for Windows. For Linux, we use the ctime header file and the clock function. The link to the repository: https://github.com/sauravMSFT/Design-Analysis-Algorithms In the next post, I'd like to talk about adding paths to the gcc and g++ environment variables on linux and maybe how to run gcc and g++ on Windows."},uses:{params:["blogId"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>
