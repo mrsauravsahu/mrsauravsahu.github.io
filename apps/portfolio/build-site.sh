@@ -35,15 +35,43 @@ fi
 echo "waiting for deploy/$DEPLOY to be ready…"
 kubectl rollout status "deploy/$DEPLOY" -n "$NAMESPACE" --timeout=180s
 
-POD="$(kubectl get pod -n "$NAMESPACE" -l "app.kubernetes.io/name=$DEPLOY" \
+# Pick a pod from the *current* ReplicaSet only. During a rollout the old pod
+# still carries the same app label while it terminates, and picking it means
+# building the source the deployment just moved away from — which produces a
+# clean, plausible, wrong build.
+HASH="$(kubectl get rs -n "$NAMESPACE" -l "app.kubernetes.io/name=$DEPLOY" \
+	--sort-by=.metadata.creationTimestamp \
+	-o jsonpath='{.items[-1:].metadata.labels.pod-template-hash}' 2>/dev/null || true)"
+
+SELECTOR="app.kubernetes.io/name=$DEPLOY"
+[ -n "$HASH" ] && SELECTOR="$SELECTOR,pod-template-hash=$HASH"
+
+POD="$(kubectl get pod -n "$NAMESPACE" -l "$SELECTOR" \
+	--field-selector=status.phase=Running \
 	-o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
 if [ -z "$POD" ]; then
-	# Fall back to whatever the deployment's own selector matches.
-	SELECTOR="$(kubectl get "deploy/$DEPLOY" -n "$NAMESPACE" \
-		-o jsonpath='{.spec.selector.matchLabels}' | tr -d '{}"' | tr ',' '\n' | paste -sd, -)"
-	POD="$(kubectl get pod -n "$NAMESPACE" -l "$SELECTOR" \
-		-o jsonpath='{.items[0].metadata.name}')"
+	echo "error: no running pod for deploy/$DEPLOY in $NAMESPACE." >&2
+	exit 1
 fi
+
+# The pod builds whatever its hostPath mount points at, which is the PROJECT_ROOT
+# it was deployed with — not wherever you happen to run this from. Those can
+# differ (a worktree deployed the stack, then you run this from the main
+# checkout), and the output would land here looking like a build of this source
+# while actually being a build of that one. Publishing the wrong branch is not a
+# mistake that announces itself, so check rather than trust.
+MOUNTED="$(kubectl get "pod/$POD" -n "$NAMESPACE" \
+	-o jsonpath='{.spec.volumes[?(@.name=="code")].hostPath.path}' 2>/dev/null || true)"
+HERE="$(pwd -P)"
+if [ -n "$MOUNTED" ] && [ "$(readlink -f "$MOUNTED")" != "$HERE" ]; then
+	echo "error: the pod builds a different source tree than this one." >&2
+	echo "       pod mounts: $MOUNTED" >&2
+	echo "       running in: $HERE" >&2
+	echo "       Redeploy against this tree, from its repo root:" >&2
+	echo "         PROJECT_ROOT=\$(pwd) plz run //apps/portfolio:local" >&2
+	exit 1
+fi
+
 echo "building in pod $POD"
 
 # Build to a scratch dir inside the pod so a failed run can't leave a partial
