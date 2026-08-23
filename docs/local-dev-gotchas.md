@@ -1,9 +1,14 @@
-# Local dev gotchas (k8s on this WSL2 host)
+# Local dev gotchas (k3d)
 
 Terse notes for debugging "blogs not showing up" style breakage. See
 `README.md` for normal setup.
 
 ## Architecture
+
+Everything runs in Kubernetes, via k3d on both Linux and macOS. Both local dev
+and the release build happen in the cluster, so there is only ever one way the
+apps are wired together. See the README for the cluster-create, which has to
+mount the repo and publish the NodePorts up front.
 
 - `apps/portfolio` — SvelteKit + `adapter-static`. Prod (GitHub Pages) is a
   static export: blog data is fetched once at build time and baked into
@@ -28,19 +33,18 @@ looks healthy, isn't.
 **Check**: `kubectl logs -n mrsauravsahu-dev -l app.kubernetes.io/name=blogs`
 — repeated `TimeoutException` = still restoring.
 
-## Gotcha 2: `localhost:30001` hangs from Node, but curl "works"
+## Gotcha 2: never build the site on the host
 
-`kubectl port-forward` binds both `127.0.0.1` and `[::1]`, but IPv4
-loopback connections just hang on this host (`curl -4` hangs too — not
-Node-specific). Plain `curl localhost:...` "works" only because curl prefers
-IPv6, masking it.
+The build bakes blog posts into the HTML at build time, so it needs the blogs
+API. A build run on the host has to reach it across the host↔cluster boundary,
+and when that fails it **fails silently**: urql resolves rather than throws
+(Gotcha 3), so the export succeeds with an empty blog and looks fine until it's
+live.
 
-**Symptom**: build/dev produce an empty blog list, no error.
-
-**Workaround**: use `http://[::1]:30001` (not `localhost`) in
-`apps/portfolio/.env`, or hit the node's real IP directly
-(`kubectl get nodes -o wide`). Better: see "real export" below — skip host
-networking entirely.
+**So don't.** Build in the pod with `apps/portfolio/build-site.sh`, where
+`BLOGS_API_URL=http://blogs` is in-cluster DNS and there is no boundary to get
+wrong. `deploy.sh` refuses a build with no `blog.html` as a last line of
+defence.
 
 ## Gotcha 3: urql swallows network/GraphQL errors
 
@@ -65,8 +69,12 @@ all when it happens, not a stale one.
 request, doesn't exercise the build-time prerender path prod actually uses.
 Can look fine locally while the real static export is broken.
 
+It serves `apps/portfolio/build/`, so point that at a build from the pod rather
+than making one on the host (Gotcha 2):
+
 ```bash
-cd apps/portfolio && npm run build
+cd apps/portfolio
+./build-site.sh && mv build-<epoch> build
 PROJECT_ROOT=$(pwd)/../.. plz run //apps/portfolio:local_static  # omit PROJECT_ROOT from repo root
 ```
 
@@ -77,45 +85,35 @@ because plain nginx doesn't replicate GitHub Pages' clean-URL resolution
 (`/blog/1` → `blog/1.html`); without it every route but `/` 404s. hostPath
 mount — no redeploy needed after rebuilding.
 
-## Doing the real export/deploy build: inside the cluster, not the host
+## The export/deploy build: inside the cluster, not the host
 
-Gotcha 2's workarounds are easy to forget — that's how the original bug
-shipped. Instead: `kubectl exec` into the running `portfolio` pod and build
-there. It already has `BLOGS_API_URL=http://blogs` (in-cluster DNS, always
-reliable) and is hostPath-mounted to `apps/portfolio`, so output appears on
-the host with no `kubectl cp`.
+This is the only supported way to produce a publishable build. `apps/portfolio/build-site.sh`
+runs `npm run export` inside the `portfolio` pod — which has
+`BLOGS_API_URL=http://blogs` (in-cluster DNS, always reliable) — and `kubectl cp`s
+the result back to the host.
 
 ```bash
-kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
-  'cd /app && npm run export && d=build-$(date +%s) && mv build "$d" && \
-   chown -R $(stat -c "%u:%g" .) "$d" && echo "OUT_DIR=$d"'
+cd apps/portfolio && ./build-site.sh      # prints the build-<epoch> dir it wrote
+./deploy.sh build-<epoch>                 # checks, then publishes to gh-pages
 ```
 
-- Container runs as root → output would be undeletable by you without the
-  `chown` (uses `/app`'s host-owning uid:gid).
-- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't
-  clobber each other. `gh-pages`/`npm run deploy` expect plain `build/` —
-  rename, or point `gh-pages -d` at the timestamped dir.
+- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't clobber
+  each other. The pod builds to a scratch dir and copies only on success.
+- `deploy.sh` never builds. It takes a directory and verifies it before pushing:
+  `index.html`, a non-empty `CNAME`, and `blog.html` — the last catches the
+  Gotcha 2 failure, where a build that never reached the API publishes an empty
+  blog.
 - Spot-check without touching k8s: `npx http-server apps/portfolio/build-<epoch> -p 8080`.
   Doesn't replicate clean-URL routing though — use `:local_static` for that.
 
-## Gotcha 5: `~/.kube/config` points at a dead endpoint; cluster is on :16443
+## Gotcha 5: point tooling at the k3d kubeconfig
 
-`~/.kube/config` targets `https://127.0.0.1:6443`, but the actual microk8s
-API server listens on `https://<node-ip>:16443` (`ss -tlnp | grep 16443`).
-So plain `kubectl`/`helm`/`plz` fail with `connection refused` on 6443 while
-`microk8s kubectl get nodes` works fine. `multipass list` is empty — there is
-no VM; the cluster is **host microk8s on this WSL2 box**, and the `:6443`
-entry is stale.
-
-**Non-destructive fix** (don't overwrite `~/.kube/config`): point tooling at a
-generated config via env only —
+`~/.kube/config` on this box still targets an old, dead endpoint, so plain
+`kubectl`/`helm`/`plz` fail with `connection refused` against it. Don't
+overwrite it — export the k3d one for the shell instead:
 
 ```bash
-microk8s config > /tmp/mk8s.kubeconfig
-export KUBECONFIG=/tmp/mk8s.kubeconfig
-# now plz/helm/kubectl reach the cluster; deploy per README, then:
-# helm uninstall -n mrsauravsahu-dev blogs data-store portfolio portfolio-static
+export KUBECONFIG="$(k3d kubeconfig write mrss)"
 ```
 
 `plz run //apps/<app>:local` still needs `PROJECT_ROOT=<repo-root>` and

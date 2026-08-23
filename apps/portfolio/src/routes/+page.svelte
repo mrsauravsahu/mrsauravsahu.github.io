@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
-	import { zoomOpen, rectOf, imageState, type Origin } from '../components/paper';
+	import { veil, imageState } from '../components/paper';
 	import Icon from 'svelte-awesome/components/Icon.svelte';
 	import { faLinkedin, faGithub, faInstagram, faUnsplash, faMedium, faDev } from '@fortawesome/free-brands-svg-icons';
 	import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -20,9 +19,35 @@
 		if (!img.src.endsWith(original)) img.src = original;
 	}
 	let topPhoto: number | null = null;
-	// The tile the print zooms out of — its rect gives the zoom both its
-	// starting position and its starting size.
-	let origin: Origin | null = null;
+
+	// Opening a print doesn't build a new element — the tile you clicked *is*
+	// the thing that opens. It stays exactly where it is in the pile and is
+	// translated, rotated and scaled up until it's filling the screen in front
+	// of you, then handed back the same way.
+	//
+	// That's what makes it read as one physical object: there is no handoff
+	// between a card and its stand-in, so there's nothing to line up and nothing
+	// that can drift. The mat, the print and the caption keep their proportions
+	// on the way because a single uniform scale carries all three.
+	//
+	// The two things standing in the card's way are both solved in CSS: the pile
+	// clips (`.photo-dump` is `overflow: hidden`) and the backdrop is painted
+	// over it. `.lifted` lifts the card above the veil, and `.photo-dump.opened`
+	// stops the clipping while one is out. No ancestor of a tile creates a
+	// stacking context, so raising it is enough to bring it to the front.
+
+	/** The transform that takes the clicked card to the middle of the screen. */
+	let liftStyle = '';
+
+	/** Which card is flying — drives the transform. Cleared on close. */
+	let liftedKey: string | null = null;
+
+	/**
+	 * Which card is painted above the veil. Deliberately outlives `liftedKey`:
+	 * the return flight has to stay on top all the way home, so this is only
+	 * dropped once the card has actually landed back in the pile.
+	 */
+	let elevatedKey: string | null = null;
 
 	// The full-res file is much heavier than the thumb, so fetching it only on
 	// click means the paper finishes flying before there is anything to show.
@@ -42,6 +67,25 @@
 		img.src = photo.full;
 	}
 
+	/**
+	 * How far a tile sits off square in the pile, in degrees, from its filename.
+	 *
+	 * Derived rather than drawn. `Math.random()` in the markup is re-run every
+	 * time Svelte re-evaluates that attribute — so lifting one print gave every
+	 * other tile in the pile a brand new angle, and the whole table twitched
+	 * around the one card that was meant to be moving. It also differed between
+	 * the server render and the client's, which is a hydration mismatch.
+	 *
+	 * A hash of the filename is stable in both directions: the same tile keeps
+	 * the same angle for the life of the page, and the pile still looks dropped
+	 * rather than laid out.
+	 */
+	function tiltOf(filename: string): string {
+		let h = 0;
+		for (let i = 0; i < filename.length; i++) h = (h * 31 + filename.charCodeAt(i)) | 0;
+		return ((((h % 800) + 800) % 800) / 100 - 4).toFixed(2); // -4deg … +4deg
+	}
+
 	// Has the full-res arrived for the print that's currently open?
 	let fullReady = false;
 
@@ -56,10 +100,70 @@
 		tileLoaded = tileLoaded;
 	}
 
+	/**
+	 * Work out where the clicked card has to go, and how much bigger it has to
+	 * get, to sit centred in front of the reader.
+	 *
+	 * The size is set by the *photo window* rather than the card: the print is
+	 * what you came to look at, and pinning the mat instead would leave the
+	 * picture a different size depending on how chunky the border happened to
+	 * be. The card is then held back if the whole of it — caption and all —
+	 * wouldn't fit on screen.
+	 *
+	 * Sizes come from the layout box (`offsetWidth`) and the position from the
+	 * rendered rect. That split matters: by the time a tile can be clicked,
+	 * `:hover` has already scaled it up 12%, so its rect is not its layout size
+	 * — but its centre is unaffected by a scale about that same centre, so the
+	 * centre is still exactly right.
+	 */
+	function liftTransform(card: HTMLElement): string {
+		const frame = card.querySelector('.tile-frame') as HTMLElement | null;
+		const printWidth = frame?.offsetWidth ?? card.offsetWidth;
+		if (printWidth === 0) return '';
+
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+
+		// Same ceiling the open print has always had: never wider than the
+		// viewport or 800px, and short enough that a 4:3 frame clears the height.
+		const target = Math.min(vw * 0.9, 800, ((vh * 0.62) * 4) / 3);
+		const scale = Math.min(
+			target / printWidth,
+			(vw * 0.92) / card.offsetWidth,
+			(vh * 0.92) / card.offsetHeight
+		);
+
+		const r = card.getBoundingClientRect();
+		const dx = vw / 2 - (r.left + r.width / 2);
+		const dy = vh / 2 - (r.top + r.height / 2);
+
+		return `--lift-x: ${dx.toFixed(2)}px; --lift-y: ${dy.toFixed(2)}px; --lift-scale: ${scale.toFixed(4)};`;
+	}
+
 	function openPhoto(e: MouseEvent, photo: Photo) {
-		origin = rectOf(e.currentTarget as HTMLElement);
+		liftStyle = liftTransform(e.currentTarget as HTMLElement);
 		fullReady = false;
 		selectedPhoto = photo;
+		liftedKey = photo.filename;
+		elevatedKey = photo.filename;
+	}
+
+	function closePhoto() {
+		selectedPhoto = null;
+		liftedKey = null;
+		// `elevatedKey` is left alone — see `onCardLanded`.
+	}
+
+	/**
+	 * The card has finished a transform transition. Only the *return* leg is
+	 * interesting: once the card is back in its slot it can drop out of the
+	 * raised layer and rejoin the pile's own stacking order.
+	 *
+	 * `transitionend` fires per property, and the card animates its shadow
+	 * alongside its transform, so the property is checked.
+	 */
+	function onCardLanded(e: TransitionEvent) {
+		if (e.propertyName === 'transform' && !liftedKey) elevatedKey = null;
 	}
 
 	// ── Terminal easter egg ────────────────────────────────
@@ -70,7 +174,7 @@
 	const MAGIC = 'sudo';
 
 	function onKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') { selectedPhoto = null; return; }
+		if (e.key === 'Escape') { closePhoto(); return; }
 		if (terminalOpen) return;
 
 		const target = e.target as HTMLElement;
@@ -100,13 +204,22 @@
 			</p>
 		</header>
 
-		<div class="photo-dump">
+		<div class="photo-dump" class:opened={elevatedKey !== null}>
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}" on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} class:lifted={elevatedKey === photo.filename} class:flying={liftedKey === photo.filename} style="--rot: {tiltOf(photo.filename)}; {elevatedKey === photo.filename ? liftStyle : ''}" on:transitionend={onCardLanded} on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
 							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" use:imageState={{ ready: () => markTileLoaded(photo), failed: (img) => fallbackToOriginal(img, photo) }} />
+							<!-- Blown up to fill the screen, a thumbnail is no longer enough
+							     resolution. The full-res file is laid over the top of it and
+							     faded in the moment it's decoded — warm from the hover
+							     preload, so in practice it's already there. Cross-fading in
+							     place keeps the print continuous; swapping the `src` would
+							     blank the card mid-flight. -->
+							{#if elevatedKey === photo.filename}
+								<img src={photo.full} alt="" aria-hidden="true" class="tile-full" class:ready={fullReady} decoding="async" use:imageState={{ ready: () => (fullReady = true), failed: (img) => fallbackToOriginal(img, photo) }} />
+							{/if}
 						</div>
 						<span class="tile-label">{photo.caption}</span>
 					</div>
@@ -171,46 +284,13 @@
 	</div>
 </section>
 
-<!-- ── Photo modal ───────────────────────────────────────── -->
+<!-- ── Photo backdrop ────────────────────────────────────
+     There is no modal any more. The print you clicked comes to you instead, so
+     all this has to do is darken the room behind it and give you somewhere to
+     click to send it back. -->
 {#if selectedPhoto}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-	<div class="modal-backdrop" transition:fade={{ duration: 260 }} on:click={() => selectedPhoto = null}>
-		<div class="modal-frame" transition:zoomOpen={{ from: origin }} on:click|stopPropagation>
-			<!-- The thumb is already decoded (it's the tile you just clicked), so it
-			     paints instantly and gives the plate its height. The full-res fades
-			     in on top once ready — warm from hover, that swap is invisible.
-			     Both need the failure fallback: in `npm run dev` the optimizer
-			     hasn't run, so *both* derivative paths 404 and only the original
-			     exists. Without it on the thumb the plate collapses to zero height
-			     and takes the absolutely-positioned full-res down with it. -->
-			{#key selectedPhoto.full}
-				<div class="modal-plate">
-					<img
-						src={selectedPhoto.thumb}
-						alt=""
-						class="modal-thumb"
-						aria-hidden="true"
-						decoding="async"
-						use:imageState={{ failed: (img) => fallbackToOriginal(img, selectedPhoto) }}
-					/>
-					<img
-						src={selectedPhoto.full}
-						alt={selectedPhoto.caption}
-						class="modal-img"
-						class:ready={fullReady}
-						decoding="async"
-						use:imageState={{
-							ready: () => (fullReady = true),
-							failed: (img) => fallbackToOriginal(img, selectedPhoto)
-						}}
-					/>
-				</div>
-			{/key}
-			{#if selectedPhoto.caption}
-				<p class="modal-caption">{selectedPhoto.caption}</p>
-			{/if}
-		</div>
-	</div>
+	<div class="modal-backdrop" transition:veil={{ duration: 420 }} on:click={closePhoto}></div>
 {/if}
 
 <!-- ── Contact ────────────────────────────────────────────── -->
@@ -375,7 +455,11 @@
 		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
 	}
 
-	.dump-item { transform: rotate(calc(var(--rot) * 1deg)); }
+	/* Spelled out as translate/rotate/scale, even at rest, so every state of the
+	   card is the same list of functions. Browsers interpolate matching lists
+	   component by component; mismatched ones get decomposed into a matrix,
+	   which turns a clean rotate-and-grow into a wobble. */
+	.dump-item { transform: translate(0px, 0px) rotate(calc(var(--rot) * 1deg)) scale(1); }
 
 	/* Held back until the thumbnail is decoded — see `tileLoaded`. */
 	.dump-item {
@@ -385,14 +469,63 @@
 
 	.dump-item.loaded { opacity: 1; }
 
-	.dump-item:hover {
-		transform: rotate(0deg) scale(1.12) !important;
+	/* Focus lifts the tile exactly as hover does. Beyond matching the pointer,
+	   it's what squares the tile up before it can be activated — the crossfade
+	   measures whatever rect is on screen at that moment, and a rotated one
+	   reports its inflated bounding box. */
+	.dump-item:hover,
+	.dump-item:focus-visible {
+		transform: translate(0px, 0px) rotate(0deg) scale(1.12) !important;
 		z-index: 20;
 		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s;
 	}
 
 	.dump-item.on-top {
 		z-index: 10;
+	}
+
+	/* ── The lift ──────────────────────────────────────
+	   A card on its way out to the reader and back. Raised above the backdrop
+	   (z-index 200) for the whole round trip, not just the outward leg, so it
+	   doesn't sink behind the veil halfway home.
+
+	   `pointer-events` go with it: the pointer is left sitting wherever the card
+	   used to be, and without this the tile underneath would light up on hover
+	   the moment the print leaves — and the flying card would fight its own
+	   `:hover` transform on the way back. */
+	.photo-dump .dump-item.lifted {
+		z-index: 250;
+		pointer-events: none;
+		transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1),
+			box-shadow 480ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	/* Out to the middle of the screen, square-on, and big. Beats `:hover`, which
+	   is also `!important` and still matches while the pointer sits over the
+	   card's old slot — later rule of equal weight, plus a class more. */
+	.photo-dump .dump-item.flying {
+		transform: translate(var(--lift-x), var(--lift-y)) rotate(0deg) scale(var(--lift-scale)) !important;
+		cursor: zoom-out;
+	}
+
+	/* The shadow is *not* scaled with the card — it's declared on the flying
+	   card itself, so these lengths are multiplied by the lift scale as they
+	   land. Kept small for that reason: at 4x it's already a deep, soft pool
+	   under a print held up close. */
+	.photo-dump .dump-item.flying .inner {
+		box-shadow: 3px 6px 14px rgba(0, 0, 0, 0.75);
+	}
+
+	/* The pile clips, to keep the scattered tiles' negative margins off the
+	   section's edges. That clip would cut the flying card in half, so it comes
+	   off while one is out — safe, because everything it was hiding is behind a
+	   near-black backdrop by then. */
+	.photo-dump.opened {
+		overflow: visible;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.photo-dump .dump-item.lifted { transition: none; }
 	}
 
 	.dump-item .inner {
@@ -402,7 +535,8 @@
 		transition: box-shadow 0.2s ease;
 	}
 
-	.dump-item:hover .inner {
+	.dump-item:hover .inner,
+	.dump-item:focus-visible .inner {
 		box-shadow: 10px 10px 28px rgba(0,0,0,0.7);
 	}
 
@@ -425,8 +559,32 @@
 		transition: opacity 0.3s ease, transform 0.3s ease;
 	}
 
-	.dump-item:hover .tile-frame img {
+	.dump-item:hover .tile-frame img,
+	.dump-item:focus-visible .tile-frame img {
 		opacity: 1;
+	}
+
+	/* The full-res print, over the thumbnail rather than replacing it.
+	   It doesn't fade in: it isn't a new picture arriving, it's the same one at
+	   a resolution that holds up close, so there's nothing to announce. It's
+	   simply not on screen until it can be drawn in full (see `imageState`),
+	   and then it is.
+
+	   Hidden with `visibility` rather than `opacity` on purpose — the hover rule
+	   above sets `opacity: 1` on every image in a frame, and outranks anything
+	   sane a class selector can say here. `visibility` is untouched by it, so a
+	   print that isn't ready cannot be revealed by accident. */
+	.tile-frame .tile-full {
+		visibility: hidden;
+		/* Fully opaque, unlike the tiles: `.tile-frame img` holds them at 0.94 to
+		   sit back into the mat, and inheriting that here would blend the sharp
+		   print with the blurred thumbnail underneath it. */
+		opacity: 1;
+		transition: none;
+	}
+
+	.tile-frame .tile-full.ready {
+		visibility: visible;
 	}
 
 	.tile-label {
@@ -452,78 +610,13 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0,0,0,0.9);
+		background: rgba(0, 0, 0, 0.9);
 		z-index: 200;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		padding: 2rem;
 		cursor: zoom-out;
-	}
-
-	.modal-frame {
-		background: var(--mat);
-		padding: 0.75rem 0.75rem 2.5rem;
-		box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-		/* The last term keeps the 4:3 plate inside the viewport height, so the
-		   print never has to be squeezed out of its aspect ratio to fit. */
-		max-width: min(90vw, 800px, calc(62vh * 4 / 3));
-		width: 100%;
-		cursor: default;
-	}
-
-	/* Same 4:3 window as the tiles in the grid (`.tile-frame`, padding-top 75%)
-	   and the same `cover` crop, so opening a print is a straight scale-up of
-	   what you clicked — the framing never shifts on the way to the screen.
-	   Fixing the ratio also means the plate has its full size before either
-	   image has loaded, so nothing reflows as they arrive. */
-	.modal-plate {
-		position: relative;
-		aspect-ratio: 4 / 3;
-		width: 100%;
-		overflow: hidden;
-		background: #cfc9bd;
-		line-height: 0;
-	}
-
-	.modal-plate img {
-		position: absolute;
-		inset: 0;
-		display: block;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: center;
-	}
-
-	.modal-thumb {
-		/* A tile-sized file blown up to plate size — a touch of blur reads as a
-		   print still developing rather than as a low-quality image. */
-		filter: blur(6px) saturate(0.92);
-		transform: scale(1.03); /* hides the blur bleeding past the edges */
-	}
-
-	.modal-img {
-		opacity: 0;
-		transition: opacity 0.28s ease;
-	}
-
-	.modal-img.ready { opacity: 1; }
-
-	@media (prefers-reduced-motion: reduce) {
-		.modal-img { transition: none; }
-	}
-
-	/* The zoomed print is the one place the reader is looking at paper rather
-	   than at the dark table, so its caption is black on the mat instead of the
-	   warm grey used on the tiles. */
-	.modal-caption {
-		text-align: center;
-		margin-top: 0.75rem;
-		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		letter-spacing: 0.08em;
-		color: #000000;
 	}
 
 	/* ── Contact ──────────────────────────────────────── */
@@ -638,7 +731,7 @@
 		.dump-item {
 			width: calc(33.33% - 1rem);
 			margin: -0.5rem;
-			transform: rotate(calc(var(--rot) * 2deg));
+			transform: translate(0px, 0px) rotate(calc(var(--rot) * 2deg)) scale(1);
 		}
 
 		footer { flex-direction: column; gap: 0.5rem; text-align: center; }
