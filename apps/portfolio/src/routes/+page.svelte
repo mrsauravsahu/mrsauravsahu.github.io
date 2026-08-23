@@ -189,7 +189,7 @@
 <svelte:window on:keydown={onKeydown} />
 
 <svelte:head>
-	<title>Sahu — photographs</title>
+	<title>Sahu · photographs</title>
 </svelte:head>
 
 <!-- ── Hero — The Print Table ─────────────────────────────── -->
@@ -199,8 +199,8 @@
 			<h1 class="hero-name fade-up">Sahu</h1>
 			<p class="hero-tagline fade-up">photographer · explorer · engineer</p>
 			<p class="hero-intro fade-up">
-				Available light and bad timing. The frames I keep are usually the ones I nearly missed —
-				mountains, streets, and the odd machine, from wherever the road went.
+				Available light and bad timing. The frames I keep are usually the ones I nearly
+				missed: mountains, streets, and the odd machine, from wherever the road went.
 			</p>
 		</header>
 
@@ -226,7 +226,7 @@
 				</button>
 			{/each}
 		</div>
-		<p class="photo-collection-note">my most recent adventure — germany and austria, april 2026. more to come soon ;)</p>
+		<p class="photo-collection-note">my most recent adventure: germany and austria, april 2026. more to come soon ;)</p>
 	</div>
 </section>
 
@@ -237,7 +237,7 @@
 		<h2 class="section-title">things I've been thinking about.</h2>
 		<p class="section-body">
 			A decade of shipping software, riding roads, and making photographs. These are the notes from
-			the journey — mostly technical, always honest.
+			the journey. Mostly technical, always honest.
 		</p>
 
 		<div class="blog-dump">
@@ -262,7 +262,7 @@
 			<div class="beyond-block">
 				<p class="beyond-block-label">creating</p>
 				<p class="beyond-block-body">
-					Notebooks, tools, side projects — I make things because I can't help it. Half of them
+					Notebooks, tools, side projects. I make things because I can't help it. Half of them
 					ship. The other half teach me more.
 				</p>
 			</div>
@@ -317,8 +317,8 @@
 <footer>
 	<p>photographs made with light · site built with SvelteKit</p>
 	<p>
-		Keep on shooting — Sahu, S
-		<button class="egg-trigger" on:click={() => terminalOpen = true} title="psst — try typing 'sudo'" aria-label="Open terminal">▋</button>
+		Keep on shooting. Sahu, S
+		<button class="egg-trigger" on:click={() => terminalOpen = true} title="psst, try typing 'sudo'" aria-label="Open terminal">▋</button>
 	</p>
 </footer>
 
