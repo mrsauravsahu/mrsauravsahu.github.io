@@ -17,14 +17,51 @@ apps/
 
 The portfolio uses `@sveltejs/adapter-static`. Photos are managed in `apps/data-store/photos/` and symlinked into `apps/portfolio/static/photos/`. At build time they are downsized to WebP derivatives under `static/photos-opt/` (grid + modal); the site never serves the multi-MB originals — see [`docs/photo-optimization.md`](docs/photo-optimization.md).
 
-### deploy to GitHub Pages
+### the build runs in the cluster, not on your machine
+
+**Builds run inside the `portfolio` pod. That is the only supported way.**
+
+The build is not self-contained: it fetches every blog post over the network
+and bakes the results into static HTML, so it needs a reachable blogs API and
+hard-fails without one (zero posts → zero links to crawl → prerender error;
+see [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 4). Host
+builds have to reach that API across the host↔cluster boundary, which is where
+they go wrong — quietly, in the case that matters, because a build that can't
+see the API produces a *successful* export with no blog posts in it.
+
+The pod has `BLOGS_API_URL=http://blogs` (in-cluster DNS), so it sidesteps host
+networking entirely. Bring the stack up under [local dev](#local-dev-kubernetes)
+first, then:
+
 ```bash
 cd apps/portfolio
-npm run deploy            # runs export (build) then pushes build/ to gh-pages
-# export writes CNAME (mrsauravsahu.in) + .nojekyll; deploy force-pushes to the gh-pages branch
+./build-site.sh                 # or: npm run build:site
 ```
 
-#### the deploy domain comes from the CNAME file
+It builds in the pod, `kubectl cp`s the result back to the host, and prints the
+directory it wrote. That's a timestamped `build-<epoch>/` by default (gitignored
+via `build-*`) so runs never clobber each other; pass a name to choose your own.
+The pod builds to a scratch directory and the copy only happens on success, so a
+failed run can't leave a half-built tree where a good one was.
+
+Override the target with `NAMESPACE=` / `DEPLOY=` if you're not on the defaults
+(`mrsauravsahu-dev` / `portfolio`).
+
+### publish to GitHub Pages
+
+`deploy.sh` takes the directory to publish and does not build — pass it what
+`build-site.sh` printed. Requires SSH push access to `origin`.
+
+```bash
+./deploy.sh build-<epoch>       # or: npm run deploy -- build-<epoch>
+```
+
+Before pushing it checks the directory is a real site (`index.html`), that
+`CNAME` is present and non-empty, and that `blog.html` exists — the last one
+catches the silent failure above, where a build that never reached the blogs API
+would otherwise publish the site with an empty blog.
+
+### the deploy domain comes from the CNAME file
 
 **The custom domain is `apps/portfolio/static/CNAME` (tracked). Deploy scripts
 must never write `build/CNAME` — change the domain by editing that one file.**
@@ -35,9 +72,9 @@ deletes anything on `gh-pages` that is missing from `build/`. So a hardcoded
 `build/CNAME` silently repoints the live domain, and a *missing* one deletes it
 outright — either way GitHub Pages stops serving the site.
 
-`deploy.sh` therefore hard-fails if `build/CNAME` is absent or empty rather than
-publishing a build that would drop the domain, and echoes the target domain
-before pushing.
+`deploy.sh` therefore hard-fails if the build's `CNAME` is absent or empty
+rather than publishing something that would drop the domain, and echoes the
+target domain before pushing.
 
 To verify what is actually live:
 
@@ -46,26 +83,12 @@ git fetch origin gh-pages
 git show origin/gh-pages:CNAME    # mrsauravsahu.in
 ```
 
-Note `npm run export` still writes `build/CNAME` itself with the same value —
-redundant now that `static/CNAME` is tracked, but harmless as long as the two
-agree. Keep them in sync if you change the domain.
+`npm run export` no longer writes `build/CNAME` itself — it used to hardcode the
+domain, which is the exact footgun described above. The tracked `static/CNAME` is
+now the only place the domain is written down.
 
-**The build fetches blog data at build time** (baked into static HTML), so a
-reachable blogs GraphQL API is required or the build hard-fails (empty blog
-list → prerender crawl error; see [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 4).
-Point `apps/portfolio/.env` at it:
-
-```bash
-# Local k8s: use the node IP + NodePort, NOT localhost — host→cluster loopback
-# hangs on this box (docs/local-dev-gotchas.md Gotcha 2). Get the node IP with
-# `kubectl get nodes -o wide`; blogs is NodePort 30001.
-echo 'BLOGS_API_URL=http://<node-ip>:30001' > apps/portfolio/.env
-```
-
-Alternatively, build the export **inside** the portfolio pod (it has
-`BLOGS_API_URL=http://blogs`), which sidesteps host networking entirely — see
-`docs/local-dev-gotchas.md`. Requires push access to `origin` (SSH) for the
-`gh-pages` branch.
+The live domain right now is `mrsauravsahu.in`, served from apex `A` records
+pointing at GitHub's `185.199.108–111.153`, with `www` a `CNAME` to the apex.
 
 ---
 
@@ -75,7 +98,16 @@ Alternatively, build the export **inside** the portfolio pod (it has
 
 - [please.build](https://please.build/) (`plz`)
 - [helm](https://helm.sh/)
-- A running k8s cluster (e.g. [MicroK8S](https://microk8s.io/)) with `~/.kube/config` configured
+- A running k8s cluster with `~/.kube/config` configured:
+  - **Linux** — [MicroK8s](https://microk8s.io/) (`microk8s start`). See
+    [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 5: the
+    checked-in kubeconfig points at a dead endpoint on this box.
+  - **macOS** — [Colima](https://github.com/abiosoft/colima) with Kubernetes
+    enabled (`colima start --kubernetes`), which brings the container runtime
+    with it.
+
+Everything runs in the cluster — the apps locally, and the release build. There
+is no separate local-only stack to keep in step with it.
 
 ### inject env vars
 ```bash

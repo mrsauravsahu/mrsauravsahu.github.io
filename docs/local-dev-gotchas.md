@@ -5,6 +5,10 @@ Terse notes for debugging "blogs not showing up" style breakage. See
 
 ## Architecture
 
+Everything runs in Kubernetes — MicroK8s on Linux, Colima with Kubernetes on
+macOS. Both local dev and the release build happen in the cluster, so there is
+only ever one way the apps are wired together.
+
 - `apps/portfolio` — SvelteKit + `adapter-static`. Prod (GitHub Pages) is a
   static export: blog data is fetched once at build time and baked into
   HTML. No runtime server, no re-fetch.
@@ -37,10 +41,11 @@ IPv6, masking it.
 
 **Symptom**: build/dev produce an empty blog list, no error.
 
-**Workaround**: use `http://[::1]:30001` (not `localhost`) in
-`apps/portfolio/.env`, or hit the node's real IP directly
-(`kubectl get nodes -o wide`). Better: see "real export" below — skip host
-networking entirely.
+**Don't work around it — don't build on the host.** Chasing this with
+`http://[::1]:30001` or the node IP in `apps/portfolio/.env` is how the
+original bug shipped: the failure is silent, so a build that never reached the
+API still *succeeds*, just with no blog posts baked in. Build in the pod
+instead (below), where there is no host↔cluster hop to get wrong.
 
 ## Gotcha 3: urql swallows network/GraphQL errors
 
@@ -77,25 +82,24 @@ because plain nginx doesn't replicate GitHub Pages' clean-URL resolution
 (`/blog/1` → `blog/1.html`); without it every route but `/` 404s. hostPath
 mount — no redeploy needed after rebuilding.
 
-## Doing the real export/deploy build: inside the cluster, not the host
+## The export/deploy build: inside the cluster, not the host
 
-Gotcha 2's workarounds are easy to forget — that's how the original bug
-shipped. Instead: `kubectl exec` into the running `portfolio` pod and build
-there. It already has `BLOGS_API_URL=http://blogs` (in-cluster DNS, always
-reliable) and is hostPath-mounted to `apps/portfolio`, so output appears on
-the host with no `kubectl cp`.
+This is the only supported way to produce a publishable build. `apps/portfolio/build-site.sh`
+runs `npm run export` inside the `portfolio` pod — which has
+`BLOGS_API_URL=http://blogs` (in-cluster DNS, always reliable) — and `kubectl cp`s
+the result back to the host.
 
 ```bash
-kubectl exec -n mrsauravsahu-dev deploy/portfolio -- sh -c \
-  'cd /app && npm run export && d=build-$(date +%s) && mv build "$d" && \
-   chown -R $(stat -c "%u:%g" .) "$d" && echo "OUT_DIR=$d"'
+cd apps/portfolio && ./build-site.sh      # prints the build-<epoch> dir it wrote
+./deploy.sh build-<epoch>                 # checks, then publishes to gh-pages
 ```
 
-- Container runs as root → output would be undeletable by you without the
-  `chown` (uses `/app`'s host-owning uid:gid).
-- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't
-  clobber each other. `gh-pages`/`npm run deploy` expect plain `build/` —
-  rename, or point `gh-pages -d` at the timestamped dir.
+- Timestamped `build-<epoch>/` (gitignored via `build-*`) so runs don't clobber
+  each other. The pod builds to a scratch dir and copies only on success.
+- `deploy.sh` never builds. It takes a directory and verifies it before pushing:
+  `index.html`, a non-empty `CNAME`, and `blog.html` — the last catches the
+  Gotcha 2 failure, where a build that never reached the API publishes an empty
+  blog.
 - Spot-check without touching k8s: `npx http-server apps/portfolio/build-<epoch> -p 8080`.
   Doesn't replicate clean-URL routing though — use `:local_static` for that.
 
