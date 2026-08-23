@@ -98,16 +98,36 @@ pointing at GitHub's `185.199.108–111.153`, with `www` a `CNAME` to the apex.
 
 - [please.build](https://please.build/) (`plz`)
 - [helm](https://helm.sh/)
-- A running k8s cluster with `~/.kube/config` configured:
-  - **Linux** — [MicroK8s](https://microk8s.io/) (`microk8s start`). See
-    [`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 5: the
-    checked-in kubeconfig points at a dead endpoint on this box.
-  - **macOS** — [Colima](https://github.com/abiosoft/colima) with Kubernetes
-    enabled (`colima start --kubernetes`), which brings the container runtime
-    with it.
+- A running k8s cluster — [k3d](https://k3d.io/) on both Linux and macOS
+  (on macOS its Docker comes from [Colima](https://github.com/abiosoft/colima))
 
 Everything runs in the cluster — the apps locally, and the release build. There
 is no separate local-only stack to keep in step with it.
+
+### create the cluster
+
+The charts mount your source into the pods with `hostPath`, and expose services
+on fixed NodePorts. Under k3d the "node" is itself a container, so both need
+setting up when the cluster is created — and the repo has to be mounted at the
+*same absolute path* it has on the host, because `hostPath` is built from
+`PROJECT_ROOT` and would otherwise point at nothing inside the node.
+
+```bash
+REPO=$(git rev-parse --show-toplevel)
+k3d cluster create mrss \
+  --volume "$REPO:$REPO@all" \
+  -p "30000:30000@server:0" \
+  -p "30001:30001@server:0" \
+  -p "30002:30002@server:0"
+
+export KUBECONFIG="$(k3d kubeconfig write mrss)"
+```
+
+Ports are fixed at creation: 30000 portfolio, 30001 blogs, 30002 the
+`:local_static` nginx. Adding one later means recreating the cluster.
+
+Mount the repo root rather than a worktree, so builds from `w/<name>` work
+without recreating anything.
 
 ### inject env vars
 ```bash
@@ -130,17 +150,20 @@ PROJECT_ROOT=$(pwd) plz run //apps/portfolio:local
 
 ### access the app
 
-Port-forward the services to localhost:
-```bash
-kubectl port-forward -n mrsauravsahu-dev svc/portfolio 3000:80
-kubectl port-forward -n mrsauravsahu-dev svc/blogs 30001:80
-```
+The NodePorts are published on the host by the cluster-create above, so no
+port-forwarding is needed:
 
-- **portfolio** → `http://localhost:3000`
+- **portfolio** → `http://localhost:30000`
 - **blogs API** → `http://localhost:30001`
+
+The blogs API takes a few minutes on first start while it restores NuGet
+packages, and reports `Running` throughout — see
+[`docs/local-dev-gotchas.md`](docs/local-dev-gotchas.md) Gotcha 1.
 
 ### cleanup
 ```bash
 helm uninstall -n mrsauravsahu-dev blogs data-store portfolio
 kubectl delete namespace mrsauravsahu-dev
+
+k3d cluster delete mrss      # or drop the whole cluster
 ```

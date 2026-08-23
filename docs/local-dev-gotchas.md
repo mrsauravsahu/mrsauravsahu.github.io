@@ -1,13 +1,14 @@
-# Local dev gotchas (k8s on this WSL2 host)
+# Local dev gotchas (k3d)
 
 Terse notes for debugging "blogs not showing up" style breakage. See
 `README.md` for normal setup.
 
 ## Architecture
 
-Everything runs in Kubernetes — MicroK8s on Linux, Colima with Kubernetes on
-macOS. Both local dev and the release build happen in the cluster, so there is
-only ever one way the apps are wired together.
+Everything runs in Kubernetes, via k3d on both Linux and macOS. Both local dev
+and the release build happen in the cluster, so there is only ever one way the
+apps are wired together. See the README for the cluster-create, which has to
+mount the repo and publish the NodePorts up front.
 
 - `apps/portfolio` — SvelteKit + `adapter-static`. Prod (GitHub Pages) is a
   static export: blog data is fetched once at build time and baked into
@@ -32,20 +33,18 @@ looks healthy, isn't.
 **Check**: `kubectl logs -n mrsauravsahu-dev -l app.kubernetes.io/name=blogs`
 — repeated `TimeoutException` = still restoring.
 
-## Gotcha 2: `localhost:30001` hangs from Node, but curl "works"
+## Gotcha 2: never build the site on the host
 
-`kubectl port-forward` binds both `127.0.0.1` and `[::1]`, but IPv4
-loopback connections just hang on this host (`curl -4` hangs too — not
-Node-specific). Plain `curl localhost:...` "works" only because curl prefers
-IPv6, masking it.
+The build bakes blog posts into the HTML at build time, so it needs the blogs
+API. A build run on the host has to reach it across the host↔cluster boundary,
+and when that fails it **fails silently**: urql resolves rather than throws
+(Gotcha 3), so the export succeeds with an empty blog and looks fine until it's
+live.
 
-**Symptom**: build/dev produce an empty blog list, no error.
-
-**Don't work around it — don't build on the host.** Chasing this with
-`http://[::1]:30001` or the node IP in `apps/portfolio/.env` is how the
-original bug shipped: the failure is silent, so a build that never reached the
-API still *succeeds*, just with no blog posts baked in. Build in the pod
-instead (below), where there is no host↔cluster hop to get wrong.
+**So don't.** Build in the pod with `apps/portfolio/build-site.sh`, where
+`BLOGS_API_URL=http://blogs` is in-cluster DNS and there is no boundary to get
+wrong. `deploy.sh` refuses a build with no `blog.html` as a last line of
+defence.
 
 ## Gotcha 3: urql swallows network/GraphQL errors
 
@@ -70,8 +69,12 @@ all when it happens, not a stale one.
 request, doesn't exercise the build-time prerender path prod actually uses.
 Can look fine locally while the real static export is broken.
 
+It serves `apps/portfolio/build/`, so point that at a build from the pod rather
+than making one on the host (Gotcha 2):
+
 ```bash
-cd apps/portfolio && npm run build
+cd apps/portfolio
+./build-site.sh && mv build-<epoch> build
 PROJECT_ROOT=$(pwd)/../.. plz run //apps/portfolio:local_static  # omit PROJECT_ROOT from repo root
 ```
 
@@ -103,23 +106,14 @@ cd apps/portfolio && ./build-site.sh      # prints the build-<epoch> dir it wrot
 - Spot-check without touching k8s: `npx http-server apps/portfolio/build-<epoch> -p 8080`.
   Doesn't replicate clean-URL routing though — use `:local_static` for that.
 
-## Gotcha 5: `~/.kube/config` points at a dead endpoint; cluster is on :16443
+## Gotcha 5: point tooling at the k3d kubeconfig
 
-`~/.kube/config` targets `https://127.0.0.1:6443`, but the actual microk8s
-API server listens on `https://<node-ip>:16443` (`ss -tlnp | grep 16443`).
-So plain `kubectl`/`helm`/`plz` fail with `connection refused` on 6443 while
-`microk8s kubectl get nodes` works fine. `multipass list` is empty — there is
-no VM; the cluster is **host microk8s on this WSL2 box**, and the `:6443`
-entry is stale.
-
-**Non-destructive fix** (don't overwrite `~/.kube/config`): point tooling at a
-generated config via env only —
+`~/.kube/config` on this box still targets an old, dead endpoint, so plain
+`kubectl`/`helm`/`plz` fail with `connection refused` against it. Don't
+overwrite it — export the k3d one for the shell instead:
 
 ```bash
-microk8s config > /tmp/mk8s.kubeconfig
-export KUBECONFIG=/tmp/mk8s.kubeconfig
-# now plz/helm/kubectl reach the cluster; deploy per README, then:
-# helm uninstall -n mrsauravsahu-dev blogs data-store portfolio portfolio-static
+export KUBECONFIG="$(k3d kubeconfig write mrss)"
 ```
 
 `plz run //apps/<app>:local` still needs `PROJECT_ROOT=<repo-root>` and
