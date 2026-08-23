@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>{blog?.title} — @mrsauravsahu</title>
+	<title>{blog?.title} · @mrsauravsahu</title>
 </svelte:head>
 
 <!-- `settle` is the second half of the card's cross-fade — the veil lifts and

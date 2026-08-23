@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>Blog — @mrsauravsahu</title>
+	<title>Blog · @mrsauravsahu</title>
 </svelte:head>
 
 <section class="blog-list">
