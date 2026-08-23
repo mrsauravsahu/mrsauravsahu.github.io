@@ -67,6 +67,25 @@
 		img.src = photo.full;
 	}
 
+	/**
+	 * How far a tile sits off square in the pile, in degrees, from its filename.
+	 *
+	 * Derived rather than drawn. `Math.random()` in the markup is re-run every
+	 * time Svelte re-evaluates that attribute — so lifting one print gave every
+	 * other tile in the pile a brand new angle, and the whole table twitched
+	 * around the one card that was meant to be moving. It also differed between
+	 * the server render and the client's, which is a hydration mismatch.
+	 *
+	 * A hash of the filename is stable in both directions: the same tile keeps
+	 * the same angle for the life of the page, and the pile still looks dropped
+	 * rather than laid out.
+	 */
+	function tiltOf(filename: string): string {
+		let h = 0;
+		for (let i = 0; i < filename.length; i++) h = (h * 31 + filename.charCodeAt(i)) | 0;
+		return ((((h % 800) + 800) % 800) / 100 - 4).toFixed(2); // -4deg … +4deg
+	}
+
 	// Has the full-res arrived for the print that's currently open?
 	let fullReady = false;
 
@@ -188,7 +207,7 @@
 		<div class="photo-dump" class:opened={elevatedKey !== null}>
 			{#each (data.photos ?? []) as photo, i}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} class:lifted={elevatedKey === photo.filename} class:flying={liftedKey === photo.filename} style="--rot: {(Math.random() * 8 - 4).toFixed(2)}; {elevatedKey === photo.filename ? liftStyle : ''}" on:transitionend={onCardLanded} on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
+				<button class="dump-item" class:on-top={topPhoto === i} class:loaded={tileLoaded[photo.filename]} class:lifted={elevatedKey === photo.filename} class:flying={liftedKey === photo.filename} style="--rot: {tiltOf(photo.filename)}; {elevatedKey === photo.filename ? liftStyle : ''}" on:transitionend={onCardLanded} on:mouseenter={() => { topPhoto = i; preloadPhoto(photo); }} on:focus={() => preloadPhoto(photo)} on:touchstart={() => preloadPhoto(photo)} on:click={(e) => openPhoto(e, photo)}>
 					<div class="inner">
 						<div class="tile-frame">
 							<img src={photo.thumb} alt={photo.caption} loading="lazy" decoding="async" use:imageState={{ ready: () => markTileLoaded(photo), failed: (img) => fallbackToOriginal(img, photo) }} />
