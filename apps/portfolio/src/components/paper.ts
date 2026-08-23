@@ -1,16 +1,16 @@
 /**
- * Opening motion — shared by the photo modal and the blog cards.
+ * Opening motion — shared by the photo grid and the blog cards.
  *
- * Photos are the thing you came to look at, so a print flies: it travels from
- * the tile you clicked to the open plate as one object. That motion is Svelte's
- * own `crossfade`, set up in the page itself — the pieces here are the
- * supporting cast around it.
+ * Photos are the thing you came to look at, so a print comes to you: the tile
+ * you clicked is translated, rotated square-on and scaled up until it's held in
+ * front of you. That's plain CSS on the card itself, in the page — no second
+ * element, nothing to hand over to. The pieces here are the supporting cast.
  *
  * Posts you came to *read*, so they get a quiet cross-fade to the next page
  * instead.
  *
- *   - `veil`         — a Svelte transition for the modal's backing sheet, which
- *                      darkens without fading what sits on top of it.
+ *   - `veil`         — a Svelte transition for the backdrop behind a lifted
+ *                      print, which darkens without fading what sits on top.
  *   - `imageState`   — a Svelte action reporting when an image really has pixels.
  *   - `fadeNavigate` — a Svelte action, for links that should dim out and hand
  *                      over to the destination page.
@@ -73,77 +73,16 @@ export function imageState(node: HTMLImageElement, handlers: ImageHandlers) {
  * Svelte transition for the modal's backing sheet: the darkness comes up, but
  * the element itself never drops below full opacity.
  *
- * A plain `fade` here would be wrong. The print is a child of this node, so the
- * backdrop's opacity multiplies into it — a card that's meant to read as the
- * physical tile you just picked up spends its whole flight semi-transparent,
- * with the grid showing through it. Animating only the colour leaves the print
- * solid from the first frame.
+ * A plain `fade` would leave the whole sheet translucent as it arrives, so the
+ * pile it's meant to be hiding stays faintly visible through it for the length
+ * of the flight. Animating only the colour brings the room down to black
+ * cleanly, and never touches the card being lifted in front of it.
  */
 export function veil(node: Element, { duration = 420 }: { duration?: number } = {}) {
 	return {
 		duration,
 		easing: cubicOut,
 		css: (t: number) => `background-color: rgba(0, 0, 0, ${0.9 * t});`
-	};
-}
-
-/** A photo window's centre and width, in viewport coordinates. */
-export type PhotoOrigin = { x: number; y: number; width: number };
-
-/**
- * Svelte transition for the paper a print is mounted on — the mat and the
- * caption — growing in step with the print itself.
- *
- * crossfade moves the photo, but it can only move the one element it's paired
- * to. Left alone the paper just fades in at full size while the photo flies into
- * it, so the two travel at visibly different rates and the polaroid stops
- * reading as a single object.
- *
- * The paper can't simply be crossfaded too: it's a different shape at each end
- * (the mat and caption are sized in rem, so a thumbnail's border is
- * proportionally much chunkier than a full plate's), and crossfade scales x and
- * y independently, so pairing them would squash it.
- *
- * So it's driven off the photo instead. Same easing and duration as the
- * crossfade, scaled about the photo's own centre and translated so that centre
- * tracks the print — which makes the whole card one object moving at one rate,
- * while the photo keeps crossfade's exact landing.
- *
- * This has to live on a *sibling* of the plate. On an ancestor it would multiply
- * into crossfade's own scale and the photo would grow quadratically.
- */
-export function paperGrow(
-	node: Element,
-	{ from, duration = 420 }: { from?: PhotoOrigin | null; duration?: number } = {}
-) {
-	if (prefersReducedMotion()) {
-		return { duration: 120, css: (t: number) => `opacity: ${t};` };
-	}
-
-	const plate = node.parentElement?.querySelector('.modal-plate');
-	const p = plate?.getBoundingClientRect();
-	if (!from || !p || p.width === 0) {
-		return { duration, easing: cubicOut, css: (t: number) => `opacity: ${t};` };
-	}
-
-	const n = node.getBoundingClientRect();
-	const px = p.left + p.width / 2;
-	const py = p.top + p.height / 2;
-
-	const s0 = from.width / p.width;
-	// The photo's centre, in this node's own coordinates — what the paper scales
-	// about, so it grows around the print rather than away from it.
-	const ox = px - n.left;
-	const oy = py - n.top;
-	const dx = from.x - px;
-	const dy = from.y - py;
-
-	return {
-		duration,
-		easing: cubicOut,
-		css: (t: number, u: number) =>
-			`transform-origin: ${ox}px ${oy}px;
-			 transform: translate(${dx * u}px, ${dy * u}px) scale(${s0 + (1 - s0) * t});`
 	};
 }
 
