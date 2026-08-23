@@ -47,7 +47,33 @@ type ImageHandlers = {
 export function imageState(node: HTMLImageElement, handlers: ImageHandlers) {
 	let current = handlers;
 
-	const onLoad = () => current.ready?.(node);
+	/**
+	 * `load` means the bytes arrived, not that the browser can paint them — the
+	 * decode still has to happen, and on a large photo that lands a frame or
+	 * more later. Revealing on `load` alone is what puts a half-painted print on
+	 * screen. `decode()` resolves only once there's a frame ready to draw, so
+	 * waiting on it is what makes "loaded" mean *showable*.
+	 *
+	 * The src is re-checked afterwards: a failure typically swaps in a fallback,
+	 * and a decode still in flight for the old one must not report the new one
+	 * ready. If decode isn't available or rejects spuriously, a complete image
+	 * with real pixels is good enough to show.
+	 */
+	const onLoad = () => {
+		const src = node.currentSrc || node.src;
+		if (typeof node.decode !== 'function') {
+			current.ready?.(node);
+			return;
+		}
+		node.decode().then(
+			() => {
+				if ((node.currentSrc || node.src) === src) current.ready?.(node);
+			},
+			() => {
+				if (node.complete && node.naturalWidth > 0) current.ready?.(node);
+			}
+		);
+	};
 	const onError = () => current.failed?.(node);
 
 	node.addEventListener('load', onLoad);

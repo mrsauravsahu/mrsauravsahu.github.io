@@ -564,13 +564,27 @@
 		opacity: 1;
 	}
 
-	/* The full-res print, over the thumbnail rather than replacing it. */
-	.tile-full {
-		opacity: 0;
+	/* The full-res print, over the thumbnail rather than replacing it.
+	   It doesn't fade in: it isn't a new picture arriving, it's the same one at
+	   a resolution that holds up close, so there's nothing to announce. It's
+	   simply not on screen until it can be drawn in full (see `imageState`),
+	   and then it is.
+
+	   Hidden with `visibility` rather than `opacity` on purpose — the hover rule
+	   above sets `opacity: 1` on every image in a frame, and outranks anything
+	   sane a class selector can say here. `visibility` is untouched by it, so a
+	   print that isn't ready cannot be revealed by accident. */
+	.tile-frame .tile-full {
+		visibility: hidden;
+		/* Fully opaque, unlike the tiles: `.tile-frame img` holds them at 0.94 to
+		   sit back into the mat, and inheriting that here would blend the sharp
+		   print with the blurred thumbnail underneath it. */
+		opacity: 1;
+		transition: none;
 	}
 
 	.tile-frame .tile-full.ready {
-		opacity: 1;
+		visibility: visible;
 	}
 
 	.tile-label {
