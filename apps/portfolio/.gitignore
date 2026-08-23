@@ -13,4 +13,6 @@ node_modules
 !/BUILD
 .env
 build
-build-*
+# Timestamped output dirs from build-site.sh. Digit-anchored so the script
+# itself isn't swallowed by its own ignore rule.
+build-[0-9]*
