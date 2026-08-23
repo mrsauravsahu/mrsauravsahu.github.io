@@ -57,10 +57,10 @@ the deploy carries dead weight. Removing it means restructuring the
 
 A full `npm run build` hard-fails without a reachable blogs GraphQL API (empty
 blog list → prerender crawl fails; see `local-dev-gotchas.md` Gotcha 4) — this
-is unrelated to images. To verify the image path alone, either point
-`BLOGS_API_URL` at a running blogs service, or temporarily add
+is unrelated to images. To verify the image path alone, temporarily add
 `handleUnseenRoutes: 'ignore'` to `prerender` in `svelte.config.js`, build,
-then revert. Measure real download bytes: serve `build/` (`python3 -m
+then revert. This produces a throwaway build for measuring images — it has no
+blog posts in it, so never publish one. Measure real download bytes: serve `build/` (`python3 -m
 http.server`) and sum the `/photos-opt/thumb/*.webp` responses.
 
 ## Verifying via the real k8s export path (prod parity)
