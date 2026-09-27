@@ -107,11 +107,12 @@
 
 	.rooms {
 		position: absolute;
-		left: 50%;
-		bottom: 1.75rem;
-		transform: translateX(-50%);
+		left: 1.5rem;
+		top: 50%;
+		transform: translateY(-50%);
 		display: flex;
-		gap: 1.5rem;
+		flex-direction: column;
+		gap: 1.25rem;
 	}
 
 	.room {
@@ -138,6 +139,20 @@
 		border-radius: 50%;
 		background: var(--accent-dim);
 		transition: background 0.2s ease, transform 0.2s ease;
+	}
+
+	.room-title {
+		text-align: left;
+		line-height: 1.4;
+	}
+
+	@media (max-width: 600px) {
+		.rooms {
+			left: 0.75rem;
+			gap: 1rem;
+		}
+
+		.room-title { display: none; }
 	}
 
 	.room.active { color: var(--accent); }

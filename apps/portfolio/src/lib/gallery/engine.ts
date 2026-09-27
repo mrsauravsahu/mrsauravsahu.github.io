@@ -39,17 +39,29 @@ const BODY_RADIUS = 0.45
 
 const WALL_COLOR = 0x0a0a0a
 const SURFACE_COLOR = 0x111111
-const MAT_COLOR = 0xede9e2
 const ACCENT = 0xd9a441
+const FRAME_COLOR = 0x3c2f1d
+const LINER_COLOR = 0xffffff
+const FRAME_BORDER = 0.11
+const LINER_BORDER = 0.12
+const FRAME_DEPTH = 0.05
+const LINER_DEPTH = 0.025
+// Same 4:3 landscape shape as the homepage Polaroids (`.tile-frame` pads to
+// 75%, i.e. a 4:3 frame) with centre-crop cover, so every photograph reads as a
+// uniform landscape painting regardless of the original's aspect.
+const PRINT_ASPECT = 4 / 3
+const PRINT_HEIGHT = 1.5
+const PRINT_WIDTH = PRINT_HEIGHT * PRINT_ASPECT
 const UP = new Vector3(0, 1, 0)
 
 // Prints are unlit (MeshBasicMaterial) so the photograph reads true rather than
-// tinted by the room; the mat around it stays lit to catch the amber safelight.
+// tinted by the room; the frame and liner around it stay lit to catch the amber
+// safelight.
 type Frame = {
   group: Group
   photo: Photo
-  matMaterial: MeshStandardMaterial
-  baseMatColor: Color
+  linerMaterial: MeshBasicMaterial
+  baseLinerColor: Color
 }
 
 type HoverHandler = (photo: Photo | null) => void
@@ -127,8 +139,8 @@ export class GalleryEngine {
   }
 
   private setupLights() {
-    this.scene.add(new AmbientLight(0x2a2a27, 1.2))
-    this.scene.add(new HemisphereLight(0x3a3833, 0x0d0d0c, 0.5))
+    this.scene.add(new AmbientLight(0x3a372f, 1.0))
+    this.scene.add(new HemisphereLight(0x4a463d, 0x121110, 0.6))
 
     // One warm "safelight" above each room, falling on the frames only.
     for (let i = 0; i < 4; i++) {
@@ -194,63 +206,83 @@ export class GalleryEngine {
     }
   }
 
-  private matFor(photo: Photo): Group {
+  private frameFor(photo: Photo): Group {
     const group = new Group()
 
-    // Default square until the real image reports its dimensions; the frame is
-    // then rebuilt to the photograph's true aspect so nothing gets stretched.
-    let photoHeight = 2.1
-    let photoWidth = 2.1
+    // Fixed 4:3 landscape, like the homepage Polaroids. The photograph is
+    // centre-cropped onto it (cover), never letterboxed or stretched.
+    let photoHeight = PRINT_HEIGHT
+    let photoWidth = PRINT_WIDTH
 
-    const borderX = 0.2
-    const borderTop = 0.22
-    const borderBottom = 0.62
+    const line = (v: number) => v + LINER_BORDER * 2
+    const outerWidth = () => line(photoWidth) + FRAME_BORDER * 2
+    const outerHeight = () => line(photoHeight) + FRAME_BORDER * 2
 
-    const matWidth = () => photoWidth + borderX * 2
-    const matHeight = () => photoHeight + borderTop + borderBottom
+    // Unlit so the mat is always true white, not tinted grey by the amber room
+    // light the way a lit surface would be.
+    const linerMaterial = new MeshBasicMaterial({ color: LINER_COLOR })
+    const liner = new Mesh(new PlaneGeometry(line(photoWidth), line(photoHeight)), linerMaterial)
+    group.add(liner)
 
-    const matMaterial = new MeshStandardMaterial({ color: MAT_COLOR, roughness: 0.92 })
-    const matGeometry = new PlaneGeometry(matWidth(), matHeight())
-    const mat = new Mesh(matGeometry, matMaterial)
-    group.add(mat)
+    // The frame is four bars of moulding (top / bottom / left / right), not a
+    // solid slab — a solid box would cover the liner and print entirely. The
+    // bars surround the liner, leaving the picture recessed in the opening.
+    const frameMaterial = new MeshStandardMaterial({ color: FRAME_COLOR, roughness: 0.65, metalness: 0.1 })
+    const frameGroup = new Group()
+
+    const rebuildFrame = (outerW: number, outerH: number, innerW: number, innerH: number) => {
+      const tall = Math.max(outerH - innerH, 0) / 2
+      const wide = Math.max(outerW - innerW, 0) / 2
+      const spec = [
+        { w: innerW, h: FRAME_BORDER, x: 0, y: outerH / 2 - tall },                    // top
+        { w: innerW, h: FRAME_BORDER, x: 0, y: -(outerH / 2 - tall) },                  // bottom
+        { w: FRAME_BORDER, h: innerH, x: -(outerW / 2 - wide), y: 0 },                  // left
+        { w: FRAME_BORDER, h: innerH, x: outerW / 2 - wide, y: 0 }                      // right
+      ]
+      for (const s of spec) {
+        const bar = new Mesh(new BoxGeometry(s.w, s.h, FRAME_DEPTH), frameMaterial)
+        bar.position.set(s.x, s.y, -LINER_DEPTH - FRAME_DEPTH / 2)
+        frameGroup.add(bar)
+      }
+    }
+
+    rebuildFrame(outerWidth(), outerHeight(), line(photoWidth), line(photoHeight))
+    group.add(frameGroup)
 
     const printGeometry = new PlaneGeometry(photoWidth, photoHeight)
     // Basic material is unlit, but its `color` still multiplies the texture —
     // a dark placeholder would dim the finished print, so it must be white.
     const photoMaterial = new MeshBasicMaterial({ color: 0xffffff })
     const print = new Mesh(printGeometry, photoMaterial)
+    print.position.z = LINER_DEPTH
     group.add(print)
 
     // Load the real image, then rebuild both planes to the true aspect ratio.
     new TextureLoader().load(photo.full, (texture) => {
       texture.colorSpace = SRGBColorSpace
+      // Center-crop to 4:3 (cover): if the source is taller than the frame,
+      // crop the top/bottom; if wider, crop the sides. Matches the Polaroid
+      // tiles' `object-fit: cover`.
+      const src = texture.image as HTMLImageElement | undefined
+      const aspect = src?.naturalWidth && src?.naturalHeight
+        ? src.naturalWidth / src.naturalHeight
+        : PRINT_ASPECT
+      if (aspect < PRINT_ASPECT) {
+        // Source is narrower (more portrait) than 4:3 — crop vertically.
+        const visible = aspect / PRINT_ASPECT
+        texture.repeat.set(1, visible)
+        texture.offset.set(0, (1 - visible) / 2)
+      } else {
+        // Source is wider (more landscape) than 4:3 — crop horizontally.
+        const visible = PRINT_ASPECT / aspect
+        texture.repeat.set(visible, 1)
+        texture.offset.set((1 - visible) / 2, 0)
+      }
       photoMaterial.map = texture
       photoMaterial.needsUpdate = true
-
-      const source = texture.image as HTMLImageElement | undefined
-      const aspect = source?.naturalWidth && source?.naturalHeight
-        ? source.naturalWidth / source.naturalHeight
-        : 4 / 3
-      const maxH = 2.1
-      const maxW = 3.1
-      // Fit within the print bounds, preserving aspect (clamp extreme ratios).
-      let h = maxH
-      let w = h * aspect
-      if (w > maxW) { w = maxW; h = w / aspect }
-      if (h > maxH) { h = maxH; w = h * aspect }
-      if (h < 1.1) { h = 1.1; w = h * aspect }
-
-      printGeometry.dispose()
-      const newPrintGeo = new PlaneGeometry(w, h)
-      print.geometry = newPrintGeo
-      print.position.set(0, (matHeight() / 2 - borderTop - h / 2), 0.012)
-
-    matGeometry.dispose()
-    const newMatGeo = new PlaneGeometry(w + borderX * 2, h + borderTop + borderBottom)
-    mat.geometry = newMatGeo
     })
 
-    this.frames.push({ group, photo, matMaterial, baseMatColor: matMaterial.color.clone() })
+    this.frames.push({ group, photo, linerMaterial, baseLinerColor: linerMaterial.color.clone() })
 
     return group
   }
@@ -263,7 +295,7 @@ export class GalleryEngine {
         const photo = photos[i]
         const onLeft = i % 2 === 0
         const side = onLeft ? -1 : 1
-        const frame = this.matFor(photo)
+        const frame = this.frameFor(photo)
         // Spread frames through the room depth, a little offset per wall so the
         // two sides don't line up in a mechanical grid.
         const t = photos.length === 1 ? 0.5 : i / (photos.length - 1)
@@ -329,9 +361,8 @@ export class GalleryEngine {
       }
     }
     for (const f of this.frames) {
-      f.matMaterial.color.copy(f.baseMatColor)
       const hot = f.photo === hitPhoto
-      f.matMaterial.emissive.set(hot ? 0x1a150a : 0x000000)
+      f.linerMaterial.color.set(hot ? 0xfff2dc : f.baseLinerColor)
       f.group.scale.setScalar(hot ? 1.035 : 1)
     }
     this.canvas.style.cursor = hitPhoto ? 'pointer' : ''
