@@ -452,6 +452,9 @@
 		margin: -0.6rem;
 		position: relative;
 		z-index: 1;
+		user-select: none;
+		-webkit-user-select: none;
+		-webkit-touch-callout: none;
 		transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s 0.2s;
 	}
 
