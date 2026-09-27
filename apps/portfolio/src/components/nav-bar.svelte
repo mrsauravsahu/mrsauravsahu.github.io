@@ -21,6 +21,7 @@
 	<ul class="links" class:open={menuOpen}>
 		<li><a href="/#writing" on:click={() => (menuOpen = false)}>writing</a></li>
 		<li><a href="/#beyond" on:click={() => (menuOpen = false)}>beyond</a></li>
+		<li><a href="/gallery" on:click={() => (menuOpen = false)}>gallery</a></li>
 		<li><a href="/blog/1" on:click={() => (menuOpen = false)}>all posts</a></li>
 		<li><a href="/#contact" on:click={() => (menuOpen = false)}>contact</a></li>
 	</ul>

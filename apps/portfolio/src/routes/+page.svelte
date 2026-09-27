@@ -226,7 +226,10 @@
 				</button>
 			{/each}
 		</div>
-		<p class="photo-collection-note">my most recent adventure: germany and austria, april 2026. more to come soon ;)</p>
+		<p class="photo-collection-note">
+			my most recent adventure: germany and austria, april 2026.
+			<a class="gallery-link" href="/gallery">walk the gallery <span class="arrow">→</span></a>
+		</p>
 	</div>
 </section>
 
@@ -608,6 +611,22 @@
 		letter-spacing: 0.12em;
 		color: var(--text-muted);
 	}
+
+	.gallery-link {
+		color: var(--accent);
+		text-decoration: none;
+		margin-left: 0.75rem;
+		white-space: nowrap;
+		transition: color 0.2s ease;
+	}
+
+	.gallery-link .arrow {
+		display: inline-block;
+		transition: transform 0.2s ease;
+	}
+
+	.gallery-link:hover { color: var(--text); }
+	.gallery-link:hover .arrow { transform: translateX(3px); }
 
 	/* ── Photo modal ──────────────────────────────────── */
 	.modal-backdrop {
