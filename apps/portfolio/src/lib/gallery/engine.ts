@@ -2,6 +2,7 @@ import {
   AmbientLight,
   BoxGeometry,
   Color,
+  CylinderGeometry,
   Group,
   HemisphereLight,
   Mesh,
@@ -40,6 +41,7 @@ const BODY_RADIUS = 0.45
 const WALL_COLOR = 0x0a0a0a
 const SURFACE_COLOR = 0x111111
 const ACCENT = 0xd9a441
+const WARM_LIGHT = 0xfff2dc
 const FRAME_COLOR = 0x3c2f1d
 const LINER_COLOR = 0xffffff
 const FRAME_BORDER = 0.11
@@ -52,15 +54,17 @@ const LINER_DEPTH = 0.025
 const PRINT_ASPECT = 4 / 3
 const PRINT_HEIGHT = 1.5
 const PRINT_WIDTH = PRINT_HEIGHT * PRINT_ASPECT
+const FRAME_CENTER_Y = 2.35
+const CEILING_LIGHT_Y = CEIL_Y - 0.15
+const PICTURE_LIGHT_REACH = 0.55
 const UP = new Vector3(0, 1, 0)
 
-// Prints are unlit (MeshBasicMaterial) so the photograph reads true rather than
-// tinted by the room; the frame and liner around it stay lit to catch the amber
-// safelight.
+// The liner is a lit surface (MeshStandardMaterial) so it can be washed by the
+// picture light above each print rather than glowing on its own.
 type Frame = {
   group: Group
   photo: Photo
-  linerMaterial: MeshBasicMaterial
+  linerMaterial: MeshStandardMaterial
   baseLinerColor: Color
 }
 
@@ -79,6 +83,7 @@ export class GalleryEngine {
   private raycaster = new Raycaster()
   private pointer = new Vector2()
   private frames: Frame[] = []
+  private pictureLights: Object3D[] = []
   private roomCount = 0
   private currentRoom = 0
 
@@ -112,8 +117,8 @@ export class GalleryEngine {
     this.pointerControls = new PointerLockControls(this.camera, this.canvas)
     this.scene.background = new Color(WALL_COLOR)
 
-    this.setupLights()
     this.setupStructure()
+    this.setupLights()
 
     // First-person on precise pointers; orbit otherwise (mobile/tablet).
     this.pointermoveHandler = (e) => {
@@ -139,16 +144,59 @@ export class GalleryEngine {
   }
 
   private setupLights() {
-    this.scene.add(new AmbientLight(0x3a372f, 1.0))
+    // Subtle warm fill so the room never falls to pure black, but weak enough
+    // that the picture lights below remain the visible source of illumination.
+    this.scene.add(new AmbientLight(WALL_COLOR, 0.9))
     this.scene.add(new HemisphereLight(0x4a463d, 0x121110, 0.6))
 
-    // One warm "safelight" above each room, falling on the frames only.
+    // Soft wash per room so walls and floor keep a little warm modelling.
     for (let i = 0; i < 4; i++) {
       const light = new SpotLight(ACCENT, 60, 26, Math.PI / 4, 0.6, 1.4)
       light.position.set(0, 6, i * ROOM_DEPTH + ROOM_DEPTH / 2)
       light.target.position.set(0, 0, i * ROOM_DEPTH + ROOM_DEPTH / 2)
       this.scene.add(light, light.target)
     }
+  }
+
+  private addPictureLights() {
+    const bezelGeometry = new CylinderGeometry(0.11, 0.11, 0.045, 24)
+    const lampGeometry = new CylinderGeometry(0.045, 0.045, 0.02, 24)
+
+    // An emissive circular ceiling can plus the bright warm puck inside it,
+    // paired with a spotlight aimed back at its print. The can sits a little
+    // in front of the wall (toward the corridor) so its beam strikes the
+    // vertical painting face instead of grazing straight down the wall.
+    for (const f of this.frames) {
+      const pos = f.group.position
+      const lightX = pos.x - Math.sign(pos.x) * PICTURE_LIGHT_REACH
+
+      const bezel = new Mesh(bezelGeometry, new MeshBasicMaterial({ color: WARM_LIGHT }))
+      bezel.position.set(lightX, CEILING_LIGHT_Y, pos.z)
+      this.scene.add(bezel)
+
+      const lamp = new Mesh(lampGeometry, new MeshBasicMaterial({ color: WARM_LIGHT }))
+      lamp.position.set(lightX, CEILING_LIGHT_Y - 0.035, pos.z)
+      this.scene.add(lamp)
+
+      const light = new SpotLight(WARM_LIGHT, 80, 7, Math.PI / 5, 0.35, 1.6)
+      light.position.set(lightX, CEILING_LIGHT_Y, pos.z)
+      light.target.position.set(pos.x, FRAME_CENTER_Y, pos.z)
+      this.scene.add(light, light.target)
+
+      this.pictureLights.push(bezel, lamp, light, light.target)
+    }
+  }
+
+  private clearPictureLights() {
+    for (const obj of this.pictureLights) {
+      const mesh = obj as MeshT
+      if (mesh.geometry) mesh.geometry.dispose()
+      const mat = mesh.material
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
+      else if (mat) mat.dispose()
+      this.scene.remove(obj)
+    }
+    this.pictureLights = []
   }
 
   private setupStructure() {
@@ -218,9 +266,9 @@ export class GalleryEngine {
     const outerWidth = () => line(photoWidth) + FRAME_BORDER * 2
     const outerHeight = () => line(photoHeight) + FRAME_BORDER * 2
 
-    // Unlit so the mat is always true white, not tinted grey by the amber room
-    // light the way a lit surface would be.
-    const linerMaterial = new MeshBasicMaterial({ color: LINER_COLOR })
+    // Lit so the mat is white near its picture light and falls off into the
+    // darker room, reading as a real illuminated surface instead of a glow.
+    const linerMaterial = new MeshStandardMaterial({ color: LINER_COLOR, roughness: 0.9 })
     const liner = new Mesh(new PlaneGeometry(line(photoWidth), line(photoHeight)), linerMaterial)
     group.add(liner)
 
@@ -250,9 +298,9 @@ export class GalleryEngine {
     group.add(frameGroup)
 
     const printGeometry = new PlaneGeometry(photoWidth, photoHeight)
-    // Basic material is unlit, but its `color` still multiplies the texture —
-    // a dark placeholder would dim the finished print, so it must be white.
-    const photoMaterial = new MeshBasicMaterial({ color: 0xffffff })
+    // Lit (Standard) so the picture light above actually shapes the print;
+    // `color` is white so it only multiplies the texture, never darkens it.
+    const photoMaterial = new MeshStandardMaterial({ color: 0xffffff, roughness: 1 })
     const print = new Mesh(printGeometry, photoMaterial)
     print.position.z = LINER_DEPTH
     group.add(print)
@@ -300,7 +348,7 @@ export class GalleryEngine {
         // two sides don't line up in a mechanical grid.
         const t = photos.length === 1 ? 0.5 : i / (photos.length - 1)
         const z = room * ROOM_DEPTH + 1.5 + t * (ROOM_DEPTH - 3)
-        frame.position.set(side * (WALL_OFFSET - 0.18), 2.35, z)
+        frame.position.set(side * (WALL_OFFSET - 0.18), FRAME_CENTER_Y, z)
         frame.rotation.y = onLeft ? Math.PI / 2 : -Math.PI / 2
         this.scene.add(frame)
       }
@@ -309,6 +357,7 @@ export class GalleryEngine {
 
   setProjects(projects: Project[]) {
     // The loader may re-run; clear any stale frames first.
+    this.clearPictureLights()
     for (const f of this.frames) {
       this.scene.remove(f.group)
       f.group.traverse((o: Object3D) => {
@@ -322,6 +371,7 @@ export class GalleryEngine {
     this.frames = []
     this.roomCount = projects.length
     this.placeFrames(projects)
+    this.addPictureLights()
     this.currentRoom = 0
     this.camera.position.set(0, EYE_Y, ROOM_DEPTH / 2)
     this.camera.lookAt(0, EYE_Y, ROOM_DEPTH * 4)
