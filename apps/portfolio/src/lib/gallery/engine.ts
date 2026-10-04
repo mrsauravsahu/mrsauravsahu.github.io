@@ -1,16 +1,23 @@
 import {
+  ACESFilmicToneMapping,
   AmbientLight,
   BoxGeometry,
+  CanvasTexture,
   Color,
   CylinderGeometry,
+  Fog,
   Group,
-  HemisphereLight,
+  LinearFilter,
+  LinearMipmapLinearFilter,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
+  PMREMGenerator,
   Raycaster,
+  RectAreaLight,
   Scene,
   SpotLight,
   TextureLoader,
@@ -21,7 +28,9 @@ import {
   type Mesh as MeshT,
   type Object3D
 } from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js'
 
 import type { Photo, Project } from '$lib/server/photos'
 
@@ -30,31 +39,34 @@ import type { Photo, Project } from '$lib/server/photos'
 // the sparse amber safelight — matching DESIGN.md's palette exactly.
 
 const FLOOR_Y = 0
-const CEIL_Y = 4.2
+const CEIL_Y = 5.1
 const EYE_Y = 1.6
 const WALL_OFFSET = 5 // half-width of the corridor (side walls at x = ±5)
 const ROOM_DEPTH = 11
 const DOOR_HALF_WIDTH = 1
 const DOOR_HEIGHT = 3
 const BODY_RADIUS = 0.45
+const MIN_WALL_DISTANCE = 1.0
 
-const WALL_COLOR = 0x0a0a0a
-const SURFACE_COLOR = 0x111111
+const WALL_COLOR = 0xd9cdb2
+const SURFACE_COLOR = 0xcfc2a6
 const ACCENT = 0xd9a441
 const WARM_LIGHT = 0xfff2dc
-const FRAME_COLOR = 0x3c2f1d
-const LINER_COLOR = 0xffffff
-const FRAME_BORDER = 0.11
-const LINER_BORDER = 0.12
-const FRAME_DEPTH = 0.05
-const LINER_DEPTH = 0.025
+const GOLD_OUTER = 0x8a6a25
+const GOLD_MID = 0xd4a83a
+const GOLD_HIGHLIGHT = 0xf2d27a
+const LINER_COLOR = 0xf5efe2
+const FRAME_BORDER = 0.22
+const LINER_BORDER = 0.2
+const FRAME_DEPTH = 0.06
+const LINER_DEPTH = 0.03
 // Same 4:3 landscape shape as the homepage Polaroids (`.tile-frame` pads to
 // 75%, i.e. a 4:3 frame) with centre-crop cover, so every photograph reads as a
 // uniform landscape painting regardless of the original's aspect.
 const PRINT_ASPECT = 4 / 3
-const PRINT_HEIGHT = 1.5
+const PRINT_HEIGHT = 0.62
 const PRINT_WIDTH = PRINT_HEIGHT * PRINT_ASPECT
-const FRAME_CENTER_Y = 2.35
+const FRAME_CENTER_Y = 2.1
 const CEILING_LIGHT_Y = CEIL_Y - 0.15
 const PICTURE_LIGHT_REACH = 0.55
 const UP = new Vector3(0, 1, 0)
@@ -71,6 +83,19 @@ type Frame = {
 type HoverHandler = (photo: Photo | null) => void
 type OpenHandler = (photo: Photo) => void
 type RoomHandler = (index: number, total: number) => void
+type ExitHandler = () => void
+type MinimapHandler = (state: {
+  x: number
+  z: number
+  dirX: number
+  dirZ: number
+  totalDepth: number
+  wallOffset: number
+  roomDepth: number
+  rooms: number
+  doorHalfWidth: number
+  paintings: { x: number; z: number }[]
+}) => void
 
 const isTouch = () =>
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -83,9 +108,11 @@ export class GalleryEngine {
   private raycaster = new Raycaster()
   private pointer = new Vector2()
   private frames: Frame[] = []
+  private roomSigns: Object3D[] = []
   private pictureLights: Object3D[] = []
   private roomCount = 0
   private currentRoom = 0
+  private exitZ = 0
 
   private keys = new Set<string>()
   private velocity = new Vector3()
@@ -104,18 +131,38 @@ export class GalleryEngine {
     private canvas: HTMLCanvasElement,
     private onHover: HoverHandler,
     private onOpen: OpenHandler,
-    private onRoom: RoomHandler
+    private onRoom: RoomHandler,
+    private onExit: ExitHandler,
+    private onMinimap: MinimapHandler
   ) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false })
-    this.renderer.outputColorSpace = SRGBColorSpace
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    RectAreaLightUniformsLib.init()
 
-    this.camera = new PerspectiveCamera(66, 1, 0.1, 200)
+    this.renderer.outputColorSpace = SRGBColorSpace
+    this.renderer.toneMapping = ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.0
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = PCFSoftShadowMap
+    this.renderer.setPixelRatio(window.devicePixelRatio)
+
+    // Image-based lighting: a neutral "room" environment gives the metallic
+    // frames real reflections so they read as gilt wood instead of flat black.
+    const pmrem = new PMREMGenerator(this.renderer)
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    pmrem.dispose()
+
+    // The neutral environment provides gilt-frame reflections but is
+    // deliberately dimmed: at its default of 1.0 it flattens the whole room
+    // into grey and robs the picture lights of their contrast.
+    this.scene.environmentIntensity = 0.3
+
+    this.camera = new PerspectiveCamera(55, 1, 0.1, 200)
     this.camera.position.set(0, EYE_Y, ROOM_DEPTH / 2)
-    this.camera.lookAt(0, EYE_Y, ROOM_DEPTH * 4)
+    this.faceEntryStart()
 
     this.pointerControls = new PointerLockControls(this.camera, this.canvas)
     this.scene.background = new Color(WALL_COLOR)
+    this.scene.fog = new Fog(WALL_COLOR, 14, 60)
 
     this.setupStructure()
     this.setupLights()
@@ -144,17 +191,20 @@ export class GalleryEngine {
   }
 
   private setupLights() {
-    // Subtle warm fill so the room never falls to pure black, but weak enough
-    // that the picture lights below remain the visible source of illumination.
-    this.scene.add(new AmbientLight(WALL_COLOR, 0.9))
-    this.scene.add(new HemisphereLight(0x4a463d, 0x121110, 0.6))
+    // Keep the base light low: the RoomEnvironment already provides the ambient
+    // bounce, so this only lifts the shadows slightly warm instead of stacking
+    // another full-brightness ambient on top of it.
+    this.scene.add(new AmbientLight(0xffd9b8, 0.35))
 
-    // Soft wash per room so walls and floor keep a little warm modelling.
+    // One broad ceiling panel per room. Area lights give the soft, spread-out
+    // museum wash (with wrapped, width-based falloff) that a cone of hard spots
+    // cannot, avoiding the flat over-bright look of many overlapping spots.
     for (let i = 0; i < 4; i++) {
-      const light = new SpotLight(ACCENT, 60, 26, Math.PI / 4, 0.6, 1.4)
-      light.position.set(0, 6, i * ROOM_DEPTH + ROOM_DEPTH / 2)
-      light.target.position.set(0, 0, i * ROOM_DEPTH + ROOM_DEPTH / 2)
-      this.scene.add(light, light.target)
+      const z = i * ROOM_DEPTH + ROOM_DEPTH / 2
+      const light = new RectAreaLight(0xffe2bd, 7, WALL_OFFSET * 1.6, 5.5)
+      light.position.set(0, CEIL_Y - 0.35, z)
+      light.lookAt(0, 0, z)
+      this.scene.add(light)
     }
   }
 
@@ -178,10 +228,11 @@ export class GalleryEngine {
       lamp.position.set(lightX, CEILING_LIGHT_Y - 0.035, pos.z)
       this.scene.add(lamp)
 
-      const light = new SpotLight(WARM_LIGHT, 80, 7, Math.PI / 5, 0.35, 1.6)
+      const light = new SpotLight(0xffe9c8, 34, 0, Math.PI / 4.5, 0.55, 2)
       light.position.set(lightX, CEILING_LIGHT_Y, pos.z)
       light.target.position.set(pos.x, FRAME_CENTER_Y, pos.z)
       this.scene.add(light, light.target)
+      light.castShadow = false
 
       this.pictureLights.push(bezel, lamp, light, light.target)
     }
@@ -201,8 +252,19 @@ export class GalleryEngine {
 
   private setupStructure() {
     const wallMat = new MeshStandardMaterial({ color: WALL_COLOR, roughness: 0.95 })
-    const floorMat = new MeshStandardMaterial({ color: SURFACE_COLOR, roughness: 0.85 })
-    const ceilMat = floorMat
+    // Plush carpet: soft, matte and uniform so the corridor reads as a museum
+    // floor that swallows light rather than reflecting it.
+    const floorMat = new MeshStandardMaterial({ color: 0x6b5a48, roughness: 1 })
+    const trimMat = new MeshStandardMaterial({ color: 0xbfae8c, roughness: 0.6, metalness: 0.1 })
+    // The ceiling catches almost no direct light (the panels point downward),
+    // so give it a faint warm emissive to read as a softly-bounced surface
+    // instead of a black void overhead.
+    const ceilMat = new MeshStandardMaterial({
+      color: 0xe3d9c1,
+      roughness: 0.95,
+      emissive: 0x2b2618,
+      emissiveIntensity: 0.25
+    })
 
     const addBox = (
       w: number, h: number, d: number,
@@ -233,6 +295,14 @@ export class GalleryEngine {
     addBox(0.2, CEIL_Y - FLOOR_Y, totalDepth, -half, (CEIL_Y - FLOOR_Y) / 2, totalDepth / 2)
     addBox(0.2, CEIL_Y - FLOOR_Y, totalDepth, half, (CEIL_Y - FLOOR_Y) / 2, totalDepth / 2)
 
+    // Crown molding and baseboard along both side walls so the junction between
+    // wall, floor and ceiling reads as a finished gallery rather than bare slabs.
+    for (const side of [-1, 1]) {
+      const x = side * (half - 0.1)
+      addBox(0.22, 0.16, totalDepth, x, CEIL_Y - 0.08, totalDepth / 2, trimMat)
+      addBox(0.24, 0.18, totalDepth, x, 0.09, totalDepth / 2, trimMat)
+    }
+
     // Front wall (behind the start) and back wall (behind the last room).
     addBox(half * 2, CEIL_Y - FLOOR_Y, 0.2, 0, (CEIL_Y - FLOOR_Y) / 2, -0.1)
     addBox(half * 2, CEIL_Y - FLOOR_Y, 0.2, 0, (CEIL_Y - FLOOR_Y) / 2, totalDepth + 0.1)
@@ -252,6 +322,171 @@ export class GalleryEngine {
         0, DOOR_HEIGHT + lintelHeight / 2, z
       )
     }
+
+    // Exit door on the far wall (behind the last room), so the hall reads as
+    // having a natural way out rather than a dead end.
+    this.exitZ = totalDepth
+    this.addExitDoor(totalDepth, Math.PI)
+    // Matching door behind the starting position so the tour can loop back out.
+    this.addExitDoor(0, 0)
+
+    this.addBenches()
+  }
+
+  private addBenches() {
+    const seatMat = new MeshStandardMaterial({ color: 0x5a4227, roughness: 0.65 })
+    const legMat = new MeshStandardMaterial({ color: 0x2f2a22, roughness: 0.7, metalness: 0.25 })
+    const BENCH_LENGTH = 1.7
+    const BENCH_HEIGHT = 0.45
+    const BENCH_DEPTH = 0.45
+
+    // Bench per room, set against the wall opposite that room's paintings.
+    for (let room = 0; room < 4; room++) {
+      const side = room % 2 === 0 ? 1 : -1
+      const z = room * ROOM_DEPTH + ROOM_DEPTH / 2
+
+      const group = new Group()
+
+      const seat = new Mesh(new BoxGeometry(BENCH_LENGTH, 0.07, BENCH_DEPTH), seatMat)
+      seat.position.y = BENCH_HEIGHT
+      group.add(seat)
+
+      for (const s of [-1, 1]) {
+        const leg = new Mesh(new BoxGeometry(0.08, BENCH_HEIGHT, 0.08), legMat)
+        leg.position.set(s * (BENCH_LENGTH / 2 - 0.08), BENCH_HEIGHT / 2, 0)
+        group.add(leg)
+      }
+
+      // Set the bench one bench-width off the wall, oriented so its length runs
+      // along the corridor and leaving clear walking space behind it.
+      group.position.set(side * (WALL_OFFSET - BENCH_DEPTH * 1.5), 0, z)
+      group.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2
+      this.scene.add(group)
+    }
+  }
+
+  // Start just inside the entry door, between the doorway and the left wall,
+  // looking down the corridor so both the left wall's paintings and the right
+  // wall's city signage are in frame.
+  private faceEntryStart() {
+    this.camera.position.set(2.2312594948877655, EYE_Y, 0.5)
+    this.camera.lookAt(2.167773230648081, EYE_Y, 1.4979827124018178)
+  }
+
+  private addRoomSigns(projects: Project[]) {
+    const titleCase = (slug: string) =>
+      slug
+        .split(/[^a-zA-Z0-9]+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')
+
+    for (let room = 0; room < projects.length; room++) {
+      const label = titleCase(projects[room].title || projects[room].slug).toUpperCase()
+      // Large painted city name on the wall opposite the room's paintings,
+      // so the empty wall carries the label. Side alternates with the art.
+      const side = room % 2 === 0 ? 1 : -1
+      const z = room * ROOM_DEPTH + ROOM_DEPTH / 2
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 1024
+      canvas.height = 256
+      const ctx = canvas.getContext('2d')!
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.font = '500 150px Geist, ui-sans-serif, system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = '#4a4034'
+      ctx.fillText(label, canvas.width / 2, canvas.height / 2)
+
+      const texture = new CanvasTexture(canvas)
+      texture.colorSpace = SRGBColorSpace
+      const material = new MeshStandardMaterial({
+        map: texture,
+        roughness: 0.9,
+        metalness: 0,
+        transparent: true,
+        depthWrite: false
+      })
+      const sign = new Mesh(new PlaneGeometry(3.6, 0.9), material)
+      sign.position.set(side * (WALL_OFFSET - 0.12), CEIL_Y / 2, z)
+      sign.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2
+      this.scene.add(sign)
+      this.roomSigns.push(sign)
+    }
+  }
+
+  private emitMinimap() {
+    const dir = this.camera.getWorldDirection(new Vector3()).setY(0).normalize()
+    this.onMinimap({
+      x: this.camera.position.x,
+      z: this.camera.position.z,
+      dirX: dir.x,
+      dirZ: dir.z,
+      totalDepth: ROOM_DEPTH * this.roomCount,
+      wallOffset: WALL_OFFSET,
+      roomDepth: ROOM_DEPTH,
+      rooms: this.roomCount,
+      doorHalfWidth: DOOR_HALF_WIDTH,
+      paintings: this.frames.map((f) => ({ x: f.group.position.x, z: f.group.position.z }))
+    })
+  }
+
+  private addExitDoor(z: number, signRotation: number) {
+    // A lighter, clearly framed door panel so the way out reads against the
+    // wall instead of disappearing into it.
+    const doorWidth = DOOR_HALF_WIDTH * 2
+    const doorHeight = DOOR_HEIGHT
+    const doorMaterial = new MeshStandardMaterial({ color: 0x4a4032, roughness: 0.7 })
+    const doorZ = z === 0 ? 0.12 : z - 0.12
+    const door = new Mesh(new PlaneGeometry(doorWidth, doorHeight), doorMaterial)
+    door.position.set(0, doorHeight / 2, doorZ)
+    this.scene.add(door)
+
+    // Door casing (jamb + lintel) in warm wood so it reads as a portal.
+    const casingMat = new MeshStandardMaterial({ color: 0x6b5738, roughness: 0.8 })
+    const casingThick = 0.09
+    const casingDepth = 0.1
+    const outerW = doorWidth + casingThick * 2
+    const outerH = doorHeight + casingThick * 2
+    const addCasing = (w: number, h: number, x: number, y: number) => {
+      const c = new Mesh(new BoxGeometry(w, h, casingDepth), casingMat)
+      c.position.set(x, y, z === 0 ? 0.06 : z - 0.06)
+      this.scene.add(c)
+    }
+    // Top lintel, left jamb, right jamb.
+    addCasing(outerW, casingThick, 0, doorHeight + casingThick / 2)
+    addCasing(casingThick, doorHeight, -doorWidth / 2 - casingThick / 2, doorHeight / 2)
+    addCasing(casingThick, doorHeight, doorWidth / 2 + casingThick / 2, doorHeight / 2)
+
+    const text = 'EXIT'
+
+    // Green EXIT lettering baked onto a plain transparent plane, painted above
+    // the door — matte and lit by the room rather than glowing on its own.
+    const canvas = document.createElement('canvas')
+    canvas.width = 512
+    canvas.height = 256
+    const ctx = canvas.getContext('2d')!
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.font = '600 96px Geist Mono, ui-monospace, monospace'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#4f8f5a'
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2)
+
+    const texture = new CanvasTexture(canvas)
+    texture.colorSpace = SRGBColorSpace
+    const signMaterial = new MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      roughness: 0.9,
+      metalness: 0
+    })
+    const sign = new Mesh(new PlaneGeometry(1.0, 0.32), signMaterial)
+    sign.position.set(0, DOOR_HEIGHT - 0.25, z === 0 ? 0.16 : z - 0.16)
+    sign.rotation.y = signRotation
+    this.scene.add(sign)
   }
 
   private frameFor(photo: Photo): Group {
@@ -272,25 +507,50 @@ export class GalleryEngine {
     const liner = new Mesh(new PlaneGeometry(line(photoWidth), line(photoHeight)), linerMaterial)
     group.add(liner)
 
-    // The frame is four bars of moulding (top / bottom / left / right), not a
-    // solid slab — a solid box would cover the liner and print entirely. The
-    // bars surround the liner, leaving the picture recessed in the opening.
-    const frameMaterial = new MeshStandardMaterial({ color: FRAME_COLOR, roughness: 0.65, metalness: 0.1 })
+    // A layered gilt frame (deep base, mid rail, raised inner lip) that reads
+    // like the ornate mouldings in a Parisian gallery rather than a flat bar.
     const frameGroup = new Group()
 
+    // Gilt wood reads best with less mirror shine and more surface grain:
+    // metalness stays modest, roughness goes a little higher so the frame
+    // catches light without turning into polished chrome.
+    const baseMat = new MeshStandardMaterial({ color: GOLD_OUTER, roughness: 0.75, metalness: 0.3 })
+    const midMat = new MeshStandardMaterial({ color: GOLD_MID, roughness: 0.65, metalness: 0.35 })
+    const lipMat = new MeshStandardMaterial({ color: GOLD_HIGHLIGHT, roughness: 0.55, metalness: 0.4 })
+
     const rebuildFrame = (outerW: number, outerH: number, innerW: number, innerH: number) => {
-      const tall = Math.max(outerH - innerH, 0) / 2
-      const wide = Math.max(outerW - innerW, 0) / 2
-      const spec = [
-        { w: innerW, h: FRAME_BORDER, x: 0, y: outerH / 2 - tall },                    // top
-        { w: innerW, h: FRAME_BORDER, x: 0, y: -(outerH / 2 - tall) },                  // bottom
-        { w: FRAME_BORDER, h: innerH, x: -(outerW / 2 - wide), y: 0 },                  // left
-        { w: FRAME_BORDER, h: innerH, x: outerW / 2 - wide, y: 0 }                      // right
+      const halfOuterW = outerW / 2
+      const halfOuterH = outerH / 2
+      const halfInnerW = innerW / 2
+      const halfInnerH = innerH / 2
+      const base = FRAME_BORDER
+      const mid = FRAME_BORDER * 0.6
+      const lip = FRAME_BORDER * 0.35
+
+      // Each layer is four bars; depth steps so the inner edges catch light.
+      const layers = [
+        { wUp: outerW, wSide: base, hUp: base, hSide: innerH, mat: baseMat, z: -FRAME_DEPTH, inset: 0 },
+        { wUp: line(photoWidth) + mid * 2, wSide: mid, hUp: mid, hSide: innerH, mat: midMat, z: -FRAME_DEPTH + 0.012, inset: base - mid },
+        { wUp: line(photoWidth) + lip * 2, wSide: lip, hUp: lip, hSide: innerH, mat: lipMat, z: LINER_DEPTH + 0.004, inset: base - lip }
       ]
-      for (const s of spec) {
-        const bar = new Mesh(new BoxGeometry(s.w, s.h, FRAME_DEPTH), frameMaterial)
-        bar.position.set(s.x, s.y, -LINER_DEPTH - FRAME_DEPTH / 2)
-        frameGroup.add(bar)
+
+      for (const layer of layers) {
+        // top / bottom
+        const tbY = halfOuterH - layer.inset - layer.hUp / 2
+        const leftRightX = halfOuterW - layer.inset - layer.wSide / 2
+        const barTop = new Mesh(new BoxGeometry(layer.wUp, layer.hUp, FRAME_DEPTH), layer.mat)
+        barTop.position.set(0, tbY, layer.z)
+        frameGroup.add(barTop)
+        const barBottom = new Mesh(new BoxGeometry(layer.wUp, layer.hUp, FRAME_DEPTH), layer.mat)
+        barBottom.position.set(0, -tbY, layer.z)
+        frameGroup.add(barBottom)
+        // left / right
+        const barLeft = new Mesh(new BoxGeometry(layer.wSide, layer.hSide, FRAME_DEPTH), layer.mat)
+        barLeft.position.set(-leftRightX, 0, layer.z)
+        frameGroup.add(barLeft)
+        const barRight = new Mesh(new BoxGeometry(layer.wSide, layer.hSide, FRAME_DEPTH), layer.mat)
+        barRight.position.set(leftRightX, 0, layer.z)
+        frameGroup.add(barRight)
       }
     }
 
@@ -305,9 +565,47 @@ export class GalleryEngine {
     print.position.z = LINER_DEPTH
     group.add(print)
 
+    // Small square caption card below the frame, aligned to the painting's left
+    // or right edge so it reads as a wall label rather than a floating dot.
+    const cardText = (photo.caption || '').trim()
+    if (cardText) {
+      const cardCanvas = document.createElement('canvas')
+      cardCanvas.width = 256
+      cardCanvas.height = 256
+      const cctx = cardCanvas.getContext('2d')!
+      cctx.clearRect(0, 0, cardCanvas.width, cardCanvas.height)
+      cctx.font = '700 22px Geist, ui-sans-serif, system-ui, sans-serif'
+      cctx.textAlign = 'left'
+      cctx.textBaseline = 'top'
+      cctx.fillStyle = '#ffffff'
+      cctx.fillText(cardText, 14, 20, cardCanvas.width - 28)
+
+      const cardTexture = new CanvasTexture(cardCanvas)
+      cardTexture.colorSpace = SRGBColorSpace
+      cardTexture.minFilter = LinearFilter
+      cardTexture.magFilter = LinearFilter
+      const cardMat = new MeshStandardMaterial({
+        color: 0xf7f1e2,
+        roughness: 0.85,
+        metalness: 0
+      })
+      cardMat.map = cardTexture
+      cardMat.needsUpdate = true
+      const cardSize = PRINT_WIDTH / 6
+      const card = new Mesh(new PlaneGeometry(cardSize, cardSize), cardMat)
+      const side = Math.random() < 0.5 ? -1 : 1
+      const cardX = side * (outerWidth() / 2 - cardSize / 2)
+      card.position.set(cardX, -outerHeight() / 2 - 0.22, LINER_DEPTH + 0.005)
+      group.add(card)
+    }
+
     // Load the real image, then rebuild both planes to the true aspect ratio.
     new TextureLoader().load(photo.full, (texture) => {
       texture.colorSpace = SRGBColorSpace
+      texture.minFilter = LinearMipmapLinearFilter
+      texture.magFilter = LinearFilter
+      texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
+      texture.generateMipmaps = true
       // Center-crop to 4:3 (cover): if the source is taller than the frame,
       // crop the top/bottom; if wider, crop the sides. Matches the Polaroid
       // tiles' `object-fit: cover`.
@@ -338,18 +636,17 @@ export class GalleryEngine {
   private placeFrames(projects: Project[]) {
     for (let room = 0; room < projects.length; room++) {
       const photos = projects[room].photos
-      // Split photos between the two side walls, alternating sides.
+      // All paintings for a room hang on one side wall, leaving the opposite
+      // wall empty for the city name; the side switches each room.
+      const side = room % 2 === 0 ? -1 : 1
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i]
-        const onLeft = i % 2 === 0
-        const side = onLeft ? -1 : 1
         const frame = this.frameFor(photo)
-        // Spread frames through the room depth, a little offset per wall so the
-        // two sides don't line up in a mechanical grid.
+        // Spread frames evenly through the room depth.
         const t = photos.length === 1 ? 0.5 : i / (photos.length - 1)
         const z = room * ROOM_DEPTH + 1.5 + t * (ROOM_DEPTH - 3)
         frame.position.set(side * (WALL_OFFSET - 0.18), FRAME_CENTER_Y, z)
-        frame.rotation.y = onLeft ? Math.PI / 2 : -Math.PI / 2
+        frame.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2
         this.scene.add(frame)
       }
     }
@@ -369,12 +666,21 @@ export class GalleryEngine {
       })
     }
     this.frames = []
+    for (const sign of this.roomSigns) {
+      this.scene.remove(sign)
+      const m = sign as MeshT
+      if (m.geometry) m.geometry.dispose()
+      const mat = m.material
+      if (Array.isArray(mat)) mat.forEach((x) => x.dispose())
+      else if (mat) mat.dispose()
+    }
+    this.roomSigns = []
     this.roomCount = projects.length
     this.placeFrames(projects)
+    this.addRoomSigns(projects)
     this.addPictureLights()
     this.currentRoom = 0
-    this.camera.position.set(0, EYE_Y, ROOM_DEPTH / 2)
-    this.camera.lookAt(0, EYE_Y, ROOM_DEPTH * 4)
+    this.faceEntryStart()
     this.onRoom(0, this.roomCount)
   }
 
@@ -457,7 +763,7 @@ export class GalleryEngine {
 
   private update(dt: number) {
     if (!isTouch()) {
-      const speed = 3.4
+      const speed = 4
       const forward = this.keys.has('KeyW') || this.keys.has('ArrowUp')
       const back = this.keys.has('KeyS') || this.keys.has('ArrowDown')
       const left = this.keys.has('KeyA') || this.keys.has('ArrowLeft')
@@ -488,12 +794,29 @@ export class GalleryEngine {
   }
 
   private constrain(next: Vector3): Vector3 {
-    const x = Math.max(-(WALL_OFFSET - BODY_RADIUS - 0.1), Math.min(WALL_OFFSET - BODY_RADIUS - 0.1, next.x))
+    const maxX = WALL_OFFSET - BODY_RADIUS - MIN_WALL_DISTANCE
+    const x = Math.max(-maxX, Math.min(maxX, next.x))
     let z = next.z
     const totalDepth = ROOM_DEPTH * this.roomCount
 
-    // Clamp to the gallery ends.
-    z = Math.max(0.2, Math.min(totalDepth - 0.2, z))
+    // The render loop starts before `setProjects` has populated the rooms; with
+    // a zero-depth hall the exit check below would fire instantly. Wait until
+    // the hall is actually laid out before treating the far wall as the exit.
+    if (this.roomCount === 0) return new Vector3(x, EYE_Y, z)
+
+    // Keep the player a short distance from the far wall unless they are in the
+    // doorway (near x = 0), which is where the exit lives.
+    const nearDoor = Math.abs(x) < DOOR_HALF_WIDTH
+    const farLimit = totalDepth - (nearDoor ? 0.4 : MIN_WALL_DISTANCE)
+
+    // Walking through the exit door returns the user to the website.
+    if (nearDoor && z > totalDepth - 0.55) {
+      this.onExit()
+      return new Vector3(x, EYE_Y, totalDepth - 0.6)
+    }
+
+    // Clamp to the gallery ends (start wall plus the far-door limit).
+    z = Math.max(0.5, Math.min(farLimit, z))
 
     // Only pass through a partition via its doorway.
     for (let i = 1; i < this.roomCount; i++) {
@@ -513,6 +836,7 @@ export class GalleryEngine {
     const dt = Math.min(0.05, 1 / 60)
     this.update(dt)
     this.renderer.render(this.scene, this.camera)
+    this.emitMinimap()
     this.animateId = requestAnimationFrame(this.loop)
   }
 

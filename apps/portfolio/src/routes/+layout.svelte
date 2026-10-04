@@ -1,8 +1,10 @@
 <script>
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import Nav from '../components/nav-bar.svelte';
 
 	let progress = 0;
+	const isGallery = $page.url.pathname === '/gallery';
 
 	onMount(() => {
 		const onScroll = () => {
@@ -16,7 +18,9 @@
 </script>
 
 <div class="progress-bar" style="width: {progress}%"></div>
-<Nav />
+{#if !isGallery}
+	<Nav />
+{/if}
 <main>
 	<slot />
 </main>

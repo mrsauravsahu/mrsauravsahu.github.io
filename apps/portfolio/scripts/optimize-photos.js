@@ -33,7 +33,7 @@ const OUT_DIR = join(process.cwd(), 'static/photos-opt');
 
 const VARIANTS = [
 	{ name: 'thumb', width: 640, quality: 72 },
-	{ name: 'full', width: 1600, quality: 80 },
+	{ name: 'full', width: 2400, quality: 92 },
 ];
 
 const IMAGE_RE = /\.(jpe?g|png)$/i;

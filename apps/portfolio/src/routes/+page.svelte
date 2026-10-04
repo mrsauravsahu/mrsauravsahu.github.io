@@ -228,7 +228,7 @@
 		</div>
 		<p class="photo-collection-note">
 			my most recent adventure: germany and austria, april 2026.
-			<a class="gallery-link" href="/gallery">walk the gallery <span class="arrow">→</span></a>
+			<a class="gallery-link" href="/gallery">Enter the Gallery</a>
 		</p>
 	</div>
 </section>
@@ -613,20 +613,26 @@
 	}
 
 	.gallery-link {
-		color: var(--accent);
+		display: block;
+		width: fit-content;
+		margin: 0.75rem auto 0;
+		background: var(--accent);
 		text-decoration: none;
-		margin-left: 0.75rem;
+		padding: 0.5rem 1rem;
+		border-radius: 0.35rem;
+		font-size: 0.62rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		font-weight: 400;
+		color: var(--text);
 		white-space: nowrap;
-		transition: color 0.2s ease;
+		transition: background 0.2s ease, color 0.2s ease;
 	}
 
-	.gallery-link .arrow {
-		display: inline-block;
-		transition: transform 0.2s ease;
+	.gallery-link:hover {
+		background: var(--accent-dim);
+		color: var(--text);
 	}
-
-	.gallery-link:hover { color: var(--text); }
-	.gallery-link:hover .arrow { transform: translateX(3px); }
 
 	/* ── Photo modal ──────────────────────────────────── */
 	.modal-backdrop {
