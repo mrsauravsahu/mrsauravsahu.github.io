@@ -17,6 +17,7 @@ env:
   K3D_CLUSTER_NAME: mrsauravsahu-ci
   IMAGE_TAG: ci-${{ github.sha }}
   NODE_VERSION: 20
+  GITVERSION_CONFIG_MONOREPO: '.cicd/common/.gitversion.yml'
 
 jobs:
   deploy:
@@ -35,10 +36,17 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.x
+          dotnet-version: 6.x
 
       - name: Install GitVersion.Tool
         run: dotnet tool install --global GitVersion.Tool --version 5.12.0
+
+      - uses: actions/cache@v4
+        with:
+          path: plz-out
+          key: plz-out-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            plz-out-${{ runner.os }}-
 
       - name: Setup k3d
         run: |
@@ -68,10 +76,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          
-          # Build all service images using Please with CI tag
+          # Build all service images using Please (same as CI)
           # VERSION is required by genrule for docker_image tagging
-          # NODE_VERSION is passed to docker build args
           VERSION=${{ env.IMAGE_TAG }} NODE_VERSION=${{ env.NODE_VERSION }} PLZ_OVERRIDES=buildenv.DOCKER_TAG:${{ env.IMAGE_TAG }} plz run //apps/blogs:docker //apps/data-store:docker //apps/portfolio:docker
 
           # Verify images exist locally
