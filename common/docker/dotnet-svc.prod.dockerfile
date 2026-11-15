@@ -1,5 +1,5 @@
-ARG DOTNET_VERSION=6.0
-ARG DOTNET_RUNTIME_VERSION=6.0-alpine
+ARG DOTNET_VERSION=8.0
+ARG DOTNET_RUNTIME_VERSION=8.0-alpine
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build-env
 
@@ -9,7 +9,7 @@ WORKDIR /app
 COPY src ./
 
 ARG ARCH=linux-x64
-RUN dotnet publish -c Release --self-contained -r $ARCH -o out
+RUN dotnet restore && dotnet publish -c Release --self-contained -r $ARCH -o out
 
 # build runtime image
 
