@@ -1,5 +1,15 @@
 svc=split_path(package_name())[-1]
 
+subinclude("@pleasings//docker")
+
+docker_image(
+    name="docker",
+    image=package_name(),
+    dockerfile="//common/docker:node-svc.prod.dockerfile",
+    srcs=glob(["src"], ["src/node_modules/**", "src/.svelte-kit/**", "src/tests/**"]),
+    build_args="--no-cache --build-arg NODE_VERSION=${NODE_VERSION:-20}"
+)
+
 tarball(
   name="local_k8s",
   srcs=["//common/k8s"] + glob("k8s/values.yaml") + glob("k8s/values.local.yaml") + glob("k8s/Chart.yaml")

@@ -16,6 +16,7 @@ env:
   NAMESPACE: mrsauravsahu-dev
   K3D_CLUSTER_NAME: mrsauravsahu-ci
   IMAGE_TAG: ci-${{ github.sha }}
+  NODE_VERSION: 20
 
 jobs:
   deploy:
@@ -70,7 +71,8 @@ jobs:
           
           # Build all service images using Please with CI tag
           # VERSION is required by genrule for docker_image tagging
-          VERSION=${{ env.IMAGE_TAG }} PLZ_OVERRIDES=buildenv.DOCKER_TAG:${{ env.IMAGE_TAG }} plz run //apps/blogs:docker //apps/data-store:docker //apps/portfolio:docker
+          # NODE_VERSION is passed to docker build args
+          VERSION=${{ env.IMAGE_TAG }} NODE_VERSION=${{ env.NODE_VERSION }} PLZ_OVERRIDES=buildenv.DOCKER_TAG:${{ env.IMAGE_TAG }} plz run //apps/blogs:docker //apps/data-store:docker //apps/portfolio:docker
 
           # Verify images exist locally
           docker images mrsauravsahu/*:${{ env.IMAGE_TAG }}
