@@ -36,7 +36,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.x
+          dotnet-version: 8.x
 
       - name: Install GitVersion.Tool
         run: dotnet tool install --global GitVersion.Tool --version 5.12.0
