@@ -5,9 +5,9 @@ svc=split_path(package_name())[-1]
 docker_image(
     name="docker",
     image=package_name(),
-    dockerfile="//common/docker:svelte-svc.prod.dockerfile",
-    srcs=glob(["src"], ["src/node_modules/**", "src/.svelte-kit/**", "src/tests/**"]),
-    build_args="--no-cache --build-arg NODE_VERSION=${NODE_VERSION:-20}"
+    dockerfile="//apps/data-store:Dockerfile",
+    srcs=glob(["package.json", "package-lock.json", "index.ts", "tsconfig.json", "data", "photos"]),
+    build_args="--no-cache"
 )
 
 sh_cmd(

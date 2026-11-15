@@ -6,7 +6,7 @@ docker_image(
     name="docker",
     image=package_name(),
     dockerfile="//common/docker:node-svc.prod.dockerfile",
-    srcs=glob(["src"], ["src/node_modules/**", "src/.svelte-kit/**", "src/tests/**"]),
+    srcs=glob(["src", "package.json", "package-lock.json", "svelte.config.js", "tsconfig.json", "vite.config.ts"], ["src/node_modules/**", "src/.svelte-kit/**", "src/tests/**"]),
     build_args="--no-cache --build-arg NODE_VERSION=${NODE_VERSION:-20}"
 )
 

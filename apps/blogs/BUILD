@@ -5,9 +5,9 @@ svc=split_path(package_name())[-1]
 docker_image(
     name="docker",
     image=package_name(),
-    dockerfile="//common/docker:svelte-svc.prod.dockerfile",
-    srcs=glob(["src"], ["src/node_modules/**", "src/.svelte-kit/**", "src/tests/**"]),
-    build_args="--no-cache --build-arg NODE_VERSION=${NODE_VERSION:-20}"
+    dockerfile="//common/docker:dotnet-svc.prod.dockerfile",
+    srcs=glob(["src"], ["src/bin/**", "src/obj/**"]),
+    build_args="--no-cache --build-arg DOTNET_VERSION=8.0 --build-arg DOTNET_RUNTIME_VERSION=8.0-alpine --build-arg SVC=mrsauravsahu.api"
 )
 
 sh_cmd(
