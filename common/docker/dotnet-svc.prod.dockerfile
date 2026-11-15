@@ -9,7 +9,7 @@ WORKDIR /app
 COPY src ./
 
 ARG ARCH=linux-x64
-RUN dotnet publish -c Release --self-contained -r $ARCH -o out
+RUN dotnet restore && dotnet publish -c Release --self-contained -r $ARCH -o out
 
 # build runtime image
 
