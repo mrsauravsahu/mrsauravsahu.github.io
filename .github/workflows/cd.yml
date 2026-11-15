@@ -1,0 +1,116 @@
+name: 'cd'
+
+# Same flow as the README's local release: k3d with the repo mounted at the same
+# path, the stack deployed with the plz :local targets, the site built in the
+# portfolio pod (build-site.sh) and published to gh-pages (deploy.sh).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+env:
+  PROJECT: mrsauravsahu
+  PROJECT_NAME: mrsauravsahu
+  NAMESPACE: mrsauravsahu-dev
+  K3D_CLUSTER_NAME: mrsauravsahu-cd
+  K3D_VERSION: v5.7.4
+  NODE_VERSION: 20
+  DOTNET_VERSION: '8.0'
+  DOTNET_RUNTIME_VERSION: 8.0-alpine
+
+jobs:
+  cd:
+    name: Build & Deploy to GitHub Pages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      PROJECT_ROOT: ${{ github.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup please.build
+        uses: sagikazarmark/setup-please-action@v0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.13.0
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.28.0
+
+      - name: Create k3d cluster
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${K3D_VERSION} bash
+          # The charts build hostPath from PROJECT_ROOT, so the repo has to exist
+          # at the same absolute path inside the k3d node.
+          k3d cluster create ${K3D_CLUSTER_NAME} \
+            --volume "${PROJECT_ROOT}:${PROJECT_ROOT}@all" \
+            --wait
+
+      - name: Deploy stack
+        # data-store isn't needed for the build: blogs and portfolio read its
+        # files straight off the hostPath mount.
+        run: plz run sequential //apps/blogs:local //apps/portfolio:local
+
+      - name: Wait for blogs and portfolio to answer
+        # No probes in LOCAL_DEVELOPMENT, so pods report Running while blogs is
+        # still restoring NuGet packages and portfolio is still in npm i.
+        run: |
+          kubectl rollout status deploy/blogs deploy/portfolio -n ${NAMESPACE} --timeout=300s
+          for i in $(seq 1 90); do
+            if kubectl exec -n ${NAMESPACE} deploy/portfolio -- sh -c '
+              curl -sf -o /dev/null http://localhost:80/ &&
+              curl -sf -o /dev/null -H "Content-Type: application/json" \
+                -d "{\"query\":\"{__typename}\"}" http://blogs/graphql
+            '; then
+              echo "ready"; exit 0
+            fi
+            sleep 10
+          done
+          kubectl logs -n ${NAMESPACE} deploy/blogs --tail=50 || true
+          kubectl logs -n ${NAMESPACE} deploy/portfolio --tail=50 || true
+          exit 1
+
+      - name: Build static site in portfolio pod
+        id: build
+        working-directory: apps/portfolio
+        run: |
+          BUILD_DIR="build-$(date +%s)"
+          ./build-site.sh "$BUILD_DIR"
+          echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_OUTPUT"
+          # Pods run as root and wrote node_modules etc. through the mount.
+          sudo chown -R "$(id -u):$(id -g)" "$PROJECT_ROOT"
+
+      - name: Deploy to GitHub Pages
+        working-directory: apps/portfolio
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # gh-pages clones origin into its own cache dir, which doesn't inherit
+          # checkout's auth header, so the token has to be in the URL.
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          ./deploy.sh "${{ steps.build.outputs.BUILD_DIR }}"
+
+      - name: Cleanup k3d
+        if: always()
+        run: k3d cluster delete ${K3D_CLUSTER_NAME} || true

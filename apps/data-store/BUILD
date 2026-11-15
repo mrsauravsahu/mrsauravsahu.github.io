@@ -5,9 +5,9 @@ svc=split_path(package_name())[-1]
 docker_image(
     name="docker",
     image=package_name(),
-    dockerfile="//apps/data-store:Dockerfile",
+    dockerfile="Dockerfile",
     srcs=glob(["package.json", "package-lock.json", "index.ts", "tsconfig.json", "data", "photos"]),
-    build_args="--no-cache"
+    build_args="--no-cache --build-arg NODE_VERSION=${NODE_VERSION}"
 )
 
 sh_cmd(

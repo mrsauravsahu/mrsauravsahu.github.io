@@ -1,4 +1,5 @@
-FROM node:14.16.1-alpine AS build
+ARG NODE_VERSION
+FROM node:${NODE_VERSION}-alpine AS build
 
 WORKDIR /app
 
@@ -10,7 +11,7 @@ COPY ./index.ts ./index.ts
 
 RUN npm run build
 
-FROM node:14.16.1-alpine
+FROM node:${NODE_VERSION}-alpine
 
 WORKDIR /app
 
