@@ -1,13 +1,15 @@
-ARG NODE_VERSION
+ARG NODE_VERSION=20
 
 FROM node:${NODE_VERSION}-alpine AS build-env
 WORKDIR /app
 
-COPY src/package*.json ./
+# Copy package files first for better layer caching
+COPY package*.json ./
 
-RUN npm ci
+# Use npm install instead of npm ci to handle missing lock file
+RUN npm install --production=false
 
-COPY src ./
+COPY . .
 
 RUN npm run build
 
@@ -17,11 +19,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY src/package*.json ./
+COPY package*.json ./
 
-RUN npm ci
+RUN npm install --production=true
 
 COPY --from=build-env /app/dist /app/dist
+COPY --from=build-env /app/node_modules /app/node_modules
 
 EXPOSE 80
 
