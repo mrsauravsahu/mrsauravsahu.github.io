@@ -1,5 +1,5 @@
-ARG DOTNET_VERSION=8.0
-ARG DOTNET_RUNTIME_VERSION=8.0-alpine
+ARG DOTNET_VERSION
+ARG DOTNET_RUNTIME_VERSION
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build-env
 
@@ -8,12 +8,14 @@ WORKDIR /app
 # copy everything else and build
 COPY src ./
 
-ARG ARCH=linux-x64
-RUN dotnet restore && dotnet publish -c Release --self-contained -r $ARCH -o out
+# Publish only the service project; publishing the solution also compiles the tests.
+ARG SVC
+ARG ARCH=linux-musl-x64
+RUN dotnet publish ${SVC}/${SVC}.csproj -c Release --self-contained -r $ARCH -o out
 
 # build runtime image
 
-FROM mcr.microsoft.com/dotnet/runtime:${DOTNET_RUNTIME_VERSION}
+FROM mcr.microsoft.com/dotnet/runtime-deps:${DOTNET_RUNTIME_VERSION}
 
 WORKDIR /app
 
