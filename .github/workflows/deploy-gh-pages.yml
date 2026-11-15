@@ -65,14 +65,29 @@ jobs:
 
       - name: Build and load images into k3d
         run: |
+          set -euo pipefail
+
+          # Debug: show Please version
+          plz version
+
           # Build all service images using Please with CI tag
-          PLZ_OVERRIDES=buildenv.DOCKER_TAG:${{ env.IMAGE_TAG }} plz run //apps/blogs:docker //apps/data-store:docker //apps/portfolio:docker
+          # VERSION is required by genrule for docker_image tagging
+          VERSION=${{ env.IMAGE_TAG }} PLZ_OVERRIDES=buildenv.DOCKER_TAG:${{ env.IMAGE_TAG }} plz run //apps/blogs:docker //apps/data-store:docker //apps/portfolio:docker
+
+          # Verify images exist locally
+          docker images mrsauravsahu/*:${{ env.IMAGE_TAG }}
+
+          # Wait a bit for k3d to be fully ready
+          sleep 5
 
           # Load images into k3d (image names from .plzconfig: default-docker-repo = mrsauravsahu)
           k3d image import -c ${{ env.K3D_CLUSTER_NAME }} \
             mrsauravsahu/blogs:${{ env.IMAGE_TAG }} \
             mrsauravsahu/data-store:${{ env.IMAGE_TAG }} \
             mrsauravsahu/portfolio:${{ env.IMAGE_TAG }}
+
+          # Verify loaded
+          k3d image list -c ${{ env.K3D_CLUSTER_NAME }} | grep mrsauravsahu
 
       - name: Generate Helm manifests with CI values
         run: |
