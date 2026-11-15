@@ -7,7 +7,7 @@ docker_image(
     image=package_name(),
     dockerfile="//common/docker:dotnet-svc.prod.dockerfile",
     srcs=glob(["src"], ["src/bin/**", "src/obj/**"]),
-    build_args="--no-cache --build-arg DOTNET_VERSION=8.0 --build-arg DOTNET_RUNTIME_VERSION=8.0-alpine --build-arg SVC=mrsauravsahu.api"
+    build_args="--no-cache --build-arg DOTNET_VERSION=6.0 --build-arg DOTNET_RUNTIME_VERSION=6.0-alpine --build-arg SVC=mrsauravsahu.api"
 )
 
 sh_cmd(
